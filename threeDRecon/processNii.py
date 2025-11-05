@@ -270,9 +270,10 @@ def preprocess(img, label_array):
     vessel_mask = (label_array == 3) | (label_array == 4) | renal_a.astype(bool) | renal_v.astype(bool)
 
     # ===== Fat dilation (혈관 영역 제외) =====
-    kidney_mask = (label_array == 2)
-    fat_mask = (label_array == 6)
     tumor_mask = (label_array == 1)
+    kidney_mask = (label_array == 2)
+    ureter_mask = (label_array == 5)
+    fat_mask = (label_array == 6)
 
     structure = np.ones((3,3,3), dtype=bool)
     dilated_kidney = binary_dilation(kidney_mask, structure=structure, iterations=2)
@@ -282,8 +283,9 @@ def preprocess(img, label_array):
 
     # 원본 segmentation 위에 renal labels 덮어쓰기
     out_arr = label_array.copy()
-    out_arr[fat_mask_dilated] = 6                    # fat label 추가
-    out_arr[vessel_mask] = label_array[vessel_mask]  # 원본 혈관 라벨 복원
+    out_arr[fat_mask_dilated] = 6                   # fat label 추가
+    out_arr[vessel_mask] = label_array[vessel_mask] # 원본 혈관 라벨 복원
+    out_arr[ureter_mask] = label_array[ureter_mask] # 원본 요관 라벨 복원
     out_arr[renal_a.astype(bool)] = 7
     out_arr[renal_v.astype(bool)] = 8
     out_img = sitk.GetImageFromArray(out_arr.astype(label_array.dtype))

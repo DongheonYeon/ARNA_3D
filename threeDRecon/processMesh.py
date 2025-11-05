@@ -92,7 +92,7 @@ def poisson_reconstruction(mesh_list, depth=8):
     )
     o3d_mesh.compute_vertex_normals()
 
-    # 포인트 샘플링
+    # 포인트 샘플링 (40000)
     pcd = o3d_mesh.sample_points_poisson_disk(number_of_points=40000)
     pcd.estimate_normals()
 
@@ -132,6 +132,17 @@ def process_poisson(scene):
         smoothed_artery = poisson_reconstruction(artery_meshes, depth=8)
         smoothed_artery.metadata["name"] = "Artery"
         rec_scene.add_geometry(smoothed_artery, node_name="Artery")
+    
+    # Artery (Artery + Renal_a) without Poisson
+    # artery_meshes = [name_to_mesh[name] for name in artery_group if name in name_to_mesh]
+    # if artery_meshes:
+    #     print("[INFO] Merging Artery group (Artery + Renal_a)")
+    #     if len(artery_meshes) > 1:
+    #         merged_artery = trimesh.util.concatenate(artery_meshes)
+    #     else:
+    #         merged_artery = artery_meshes[0].copy()
+    #     merged_artery.metadata["name"] = "Artery"
+    #     rec_scene.add_geometry(merged_artery, node_name="Artery")
 
     # Vein System (Vein + Renal_v)
     vein_meshes = [name_to_mesh[name] for name in vein_group if name in name_to_mesh]
@@ -143,6 +154,7 @@ def process_poisson(scene):
 
     # 나머지 구조물은 그대로 추가
     excluded = set(artery_group + vein_group)
+    # excluded = set(vein_group)
     for name, mesh in name_to_mesh.items():
         if name not in excluded:
             mesh.name = name

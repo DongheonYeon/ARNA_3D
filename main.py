@@ -17,7 +17,27 @@ def parse_info(case_path):
     case_phase =  phase_match.group(1) if phase_match else None
     return case_id, case_phase
 
-def main(case_path):
+# 디버그 저장 헬퍼
+def save_debug(scene: trimesh.Scene, save_dir: str, phase: str, tag: str, debug: bool = False):
+    """
+    scene을 obj_{phase}_{tag}.glb로 저장 (debug=True일 때만)
+    """
+    if not debug:
+        return None
+    if scene is None:
+        print(f"[WARN] Debug save skipped: scene is None ({tag})")
+        return None
+    os.makedirs(save_dir, exist_ok=True)
+    out_path = os.path.join(save_dir, f"obj_{phase}_{tag}.glb")
+    try:
+        scene.export(out_path)
+        print(f"[DEBUG] Saved: {out_path}")
+        return out_path
+    except Exception as e:
+        print(f"[WARN] Debug save failed ({tag}): {e}")
+        return None
+
+def main(case_path,  debug=True):
     start_time = time.time()
     _, phase = parse_info(case_path)
     base_path = Path(case_path).parent.parent
@@ -42,6 +62,21 @@ def main(case_path):
     sitk.WriteImage(kidney_img, temp_kidney_path)
     
     construct_glb = combineGLB2.combine_glb(temp_path, temp_kidney_path)
+    
+    save_dir = os.path.join(base_path, '3d')
+    os.makedirs(save_dir, exist_ok=True)
+    save_debug(construct_glb, save_dir, phase, "before_step1", debug)
+
+    # ===== 생성된 임시 파일 삭제 =====
+    try:
+        if temp_path.exists():
+            temp_path.unlink()
+        if temp_kidney_path.exists():
+            temp_kidney_path.unlink()
+        print("[INFO] Temporary files removed.")
+    except Exception as e:
+        print(f"[WARN] Temp file cleanup failed: {e}")
+
 
     # 1st smoothing
     print("[INFO] Step1")
@@ -58,7 +93,8 @@ def main(case_path):
             dilation_func=cfg.get("dilation_func"),
             dilation_kwargs=cfg.get("dilation_kwargs", {}),
         )
-
+    save_debug(new_scene, save_dir, phase, "after_step1", debug)
+    
     # poisson reconstruction
     poisson_recon = processMesh.process_poisson(new_scene)
     
@@ -78,8 +114,8 @@ def main(case_path):
             dilation_kwargs=cfg.get("dilation_kwargs", {}),
         )
 
-    save_dir = os.path.join(base_path, '3d')
-    os.makedirs(save_dir, exist_ok=True)
+    # save_dir = os.path.join(base_path, '3d')
+    # os.makedirs(save_dir, exist_ok=True)
     save_path = os.path.join(save_dir, f'obj_{phase}.glb')
     final_scene.export(save_path)
     end_time = time.time()
@@ -94,5 +130,5 @@ if __name__ == "__main__":
     출력은 결과가 저장된 경로를 반환합니다.
     output = "path/case_0000/3d/obj_A.nii.gz"
     '''
-    case_path = r".\data\case_0027\mask\segment_A.nii.gz"
+    case_path = r".\data\case_S004\mask\segment_A.nii.gz"
     result = main(case_path)

@@ -12,3 +12,4 @@ scikit-image>=0.24.0
 # Image processing
 opencv-python>=4.11.0.86
 
+vtk==9.2.6

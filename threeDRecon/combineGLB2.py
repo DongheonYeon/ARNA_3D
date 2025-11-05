@@ -101,17 +101,12 @@ def rotate_and_center(scene):
     new_scene = trimesh.Scene(transformed_geometries)
     return new_scene
 
-def make_glb(
-    temp_path, temp_kidney_path
-):
+def make_glb(temp_path, temp_kidney_path):
     reader = read_volume(temp_path)
     reader_kidney = read_volume(temp_kidney_path)
     scene = trimesh.Scene()
 
-    for name, label in LABELS.items():
-        label_name = name
-        label_val = label
-
+    for label_name, label_val in LABELS.items():        
         # 1) Marching Cubes
         extractor = create_mask_extractor(reader)
         extractor.SetValue(0, label_val)
@@ -137,7 +132,7 @@ def make_glb(
         base_mesh = vtk_polydata_to_trimesh(polydata)
         kidney_mesh = vtk_polydata_to_trimesh(polydata_kidney)
         if base_mesh is None or base_mesh.faces.size == 0:
-            print(f"[WARN] '{name}' 변환 실패, skip")
+            print(f"[WARN] '{label_name}' 변환 실패, skip")
             continue
         
         if label_name == "Kidney":
@@ -148,7 +143,7 @@ def make_glb(
             parts = sorted(parts, key=lambda m: m.centroid[2])
             sides = ["L", "R"]
             for part, side in zip(parts, sides):
-                part_name = f"{name}-{side}"
+                part_name = f"{label_name}-{side}"
                 part.metadata["name"] = part_name
                 scene.add_geometry(part, node_name=part_name)
         elif label_name == "Fat":
@@ -159,7 +154,7 @@ def make_glb(
             parts = sorted(parts, key=lambda m: m.centroid[2])
             sides = ["L", "R"]
             for part, side in zip(parts, sides):
-                part_name = f"{name}-{side}"
+                part_name = f"{label_name}-{side}"
                 part.metadata["name"] = part_name
                 scene.add_geometry(part, node_name=part_name)
         else:
@@ -175,7 +170,6 @@ def combine_glb(temp_path, temp_kidney_path):
     # result.export(r"C:\Users\USER\Documents\vscode_projects\ARNA-3D\data\case_0001\mask\temp.obj")
     print(f"[INFO] 결과: {result}")
     return result
-    
 
 if __name__ == "__main__":
     temp_path = r"C:\Users\USER\Documents\vscode_projects\ARNA-3D\data\case_0001\mask\temp.nii.gz"

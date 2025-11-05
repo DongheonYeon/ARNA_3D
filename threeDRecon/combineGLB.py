@@ -93,7 +93,14 @@ def rotate_and_center(scene):
     new_scene = trimesh.Scene(transformed_geometries)
     return new_scene
 
-def combine_glb(label_array, spacing):
+# def combine_glb(label_array, spacing):
+def combine_glb(temp_path, temp_kidney_path):
+    img = sitk.ReadImage(temp_path)
+    # kidney_img = sitk.ReadImage(temp_kidney_path)
+    label_array = sitk.GetArrayFromImage(img)
+    # kidney_img_arr = sitk.GetArrayFromImage(kidney_img)
+    spacing = img.GetSpacing()[::-1]
+    
     # ===== Scene 구성 =====
     scene = trimesh.Scene() # 결과 Scene
     for name, label in LABELS.items():

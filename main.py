@@ -92,6 +92,8 @@ def main(case_path,  debug=True):
             smoothing_kwargs=cfg.get("smoothing_kwargs", {}),
             dilation_func=cfg.get("dilation_func"),
             dilation_kwargs=cfg.get("dilation_kwargs", {}),
+            simplification_func=cfg.get("simplification_func"),
+            simplification_kwargs=cfg.get("simplification_kwargs", {})
         )
     save_debug(new_scene, save_dir, phase, "after_step1", debug)
     
@@ -112,6 +114,8 @@ def main(case_path,  debug=True):
             smoothing_kwargs=cfg.get("smoothing_kwargs", {}),
             dilation_func=cfg.get("dilation_func"),
             dilation_kwargs=cfg.get("dilation_kwargs", {}),
+            simplification_func=cfg.get("simplification_func"),
+            simplification_kwargs=cfg.get("simplification_kwargs", {})
         )
 
     # save_dir = os.path.join(base_path, '3d')
@@ -130,5 +134,5 @@ if __name__ == "__main__":
     출력은 결과가 저장된 경로를 반환합니다.
     output = "path/case_0000/3d/obj_A.nii.gz"
     '''
-    case_path = r".\data\case_S004\mask\segment_A.nii.gz"
+    case_path = r".\data\case_S018\mask\segment_A.nii.gz"
     result = main(case_path)

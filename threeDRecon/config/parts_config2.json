@@ -1,5 +1,56 @@
 [
   {
+    "name": "Tumor",
+    "smoothing_func": null,
+    "smoothing_kwargs": null,
+    "dilation_func": "default",
+    "dilation_kwargs": {
+      "offset": 0.5
+    },
+    "simplification_func": null,
+    "simplification_kwargs": null
+  },
+  {
+    "name": "Kidney-L",
+    "smoothing_func": null,
+    "smoothing_kwargs": null,
+    "dilation_func": null,
+    "dilation_kwargs": null,
+    "simplification_func": null,
+    "simplification_kwargs": null
+  },
+  {
+    "name": "Kidney-R",
+    "smoothing_func": null,
+    "smoothing_kwargs": null,
+    "dilation_func": null,
+    "dilation_kwargs": null,
+    "simplification_func": null,
+    "simplification_kwargs": null
+  },
+  {
+    "name": "Fat-L",
+    "smoothing_func": null,
+    "smoothing_kwargs": null,
+    "dilation_func": "default",
+    "dilation_kwargs": {
+      "offset": 0.5
+    },
+    "simplification_func": null,
+    "simplification_kwargs": null
+  },
+  {
+    "name": "Fat-R",
+    "smoothing_func": null,
+    "smoothing_kwargs": null,
+    "dilation_func": "default",
+    "dilation_kwargs": {
+      "offset": 0.5
+    },
+    "simplification_func": null,
+    "simplification_kwargs": null
+  },
+  {
     "name": "Artery",
     "smoothing_func": "taubin",
     "smoothing_kwargs": {
@@ -11,7 +62,9 @@
       "non_manifold_smoothing": true
     },
     "dilation_func": null,
-    "dilation_kwargs": null
+    "dilation_kwargs": null,
+    "simplification_func": null,
+    "simplification_kwargs": null
   },
   {
     "name": "Vein",
@@ -25,52 +78,17 @@
       "non_manifold_smoothing": true
     },
     "dilation_func": null,
-    "dilation_kwargs": null
-  },
-  {
-    "name": "Tumor",
-    "smoothing_func": null,
-    "smoothing_kwargs": null,
-    "dilation_func": null,
-    "dilation_kwargs": null
-  },
-  {
-    "name": "Kidney-L",
-    "smoothing_func": null,
-    "smoothing_kwargs": null,
-    "dilation_func": null,
-    "dilation_kwargs": null
-  },
-  {
-    "name": "Kidney-R",
-    "smoothing_func": null,
-    "smoothing_kwargs": null,
-    "dilation_func": null,
-    "dilation_kwargs": null
-  },
-  {
-    "name": "Fat-L",
-    "smoothing_func": null,
-    "smoothing_kwargs": null,
-    "dilation_func": "default",
-    "dilation_kwargs": {
-      "offset": 0.5
-    }
-  },
-  {
-    "name": "Fat-R",
-    "smoothing_func": null,
-    "smoothing_kwargs": null,
-    "dilation_func": "default",
-    "dilation_kwargs": {
-      "offset": 0.5
-    }
+    "dilation_kwargs": null,
+    "simplification_func": null,
+    "simplification_kwargs": null
   },
   {
     "name": "Ureter",
     "smoothing_func": null,
     "smoothing_kwargs": null,
     "dilation_func": null,
-    "dilation_kwargs": null
+    "dilation_kwargs": null,
+    "simplification_func": null,
+    "simplification_kwargs": null
   }
 ]

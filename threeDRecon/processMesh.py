@@ -4,7 +4,7 @@ import pyvista as pv
 import open3d as o3d
 
 
-def default_dilation(mesh: pv.PolyData, offset: float = -0.5) -> pv.PolyData:
+def default_dilation(mesh: pv.PolyData, offset: float = 0.5) -> pv.PolyData:
     mesh.compute_normals(inplace=True)
     mesh.points += offset * mesh.point_normals
     return mesh
@@ -17,20 +17,9 @@ def mesh_smoothing(
     smoothing_kwargs: dict = None,
     dilation_func: str = None,
     dilation_kwargs: dict = None,
+    simplification_func: str = None, 
+    simplification_kwargs: dict = None
     ):
-    """
-    Extract a mesh by name from the scene, apply optional smoothing and dilation,
-    then convert back to trimesh and add to new_scene.
-
-    :param scene: original trimesh.Scene
-    :param new_scene: output trimesh.Scene
-    :param part_name: key name of the mesh geometry
-    :param smoothing_func: function to smooth a PyVista mesh (e.g., PolyData.smooth_taubin or laplacian)
-    :param smoothing_kwargs: keyword arguments for smoothing_func
-    :param dilation_func: function to dilate (offset) a PyVista mesh along normals
-    :param dilation_kwargs: keyword arguments for dilation_func
-    """
-    
     SMOOTHING_FUNC_MAP = {
         "laplacian": pv.PolyData.smooth,
         "taubin": pv.PolyData.smooth_taubin,
@@ -39,6 +28,11 @@ def mesh_smoothing(
     DILATION_FUNC_MAP = {
         "default": default_dilation,
         None: lambda mesh, **kwargs: mesh  # None일 경우 아무 처리도 하지 않음
+    }
+    SIMPLIFICATION_FUNC_MAP = {
+        "decimate": pv.PolyData.decimate,      
+        "decimate_pro": pv.PolyData.decimate_pro, 
+        None: lambda mesh, **kwargs: mesh
     }
 
     mesh = scene.geometry.get(part_name)
@@ -67,6 +61,18 @@ def mesh_smoothing(
             raise ValueError(f"[ERROR] Unknown smoothing_type: {smoothing_type}")
         print(f"{'':7}- Apply Smoothing")
         pv_mesh = smoothing_func(pv_mesh, **(smoothing_kwargs or {}))
+
+    # Simplification (by Decimation)
+    if simplification_func:
+        simp_method = SIMPLIFICATION_FUNC_MAP.get(simplification_func)
+        if simp_method is None:
+             print(f"[WARN] Unknown simplification type: {simplification_func}")
+        else:
+            # target_reduction: 0.0 ~ 1.0 (예: 0.5면 면의 50%를 제거)
+            print(f"{'':7}- Apply Simplification ({simplification_func})")
+            pv_mesh = simp_method(pv_mesh, **(simplification_kwargs or {}))
+            # pv_mesh.clean(tolerance=1.0, inplace=True)
+            # pv_mesh = pv_mesh.triangulate()
 
     # Convert back to trimesh
     final_mesh = trimesh.Trimesh(

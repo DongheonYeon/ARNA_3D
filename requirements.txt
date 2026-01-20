@@ -1,15 +1,10 @@
-# Core medical imaging and 3D processing
 SimpleITK>=2.4.1
 trimesh>=4.6.6
 pyvista>=0.44.2
 open3d>=0.19.0
-
-# Scientific computing
 numpy>=1.26.4
 scipy>=1.15.1
 scikit-image>=0.24.0
-
-# Image processing
 opencv-python>=4.11.0.86
-
-vtk==9.2.6
+vtk>=9.2.6
+pygltflib>=1.16.0

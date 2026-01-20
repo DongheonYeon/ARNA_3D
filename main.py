@@ -118,9 +118,9 @@ def main(case_path,  debug=True):
             simplification_kwargs=cfg.get("simplification_kwargs", {})
         )
 
-    # Boolean subtraction: Kidney에서 Tumor 영역 제거
+    # Boolean subtraction: Kidney에서 Tumor 영역 제거 (Blender 사용)
     print("[INFO] Step3: Boolean subtraction (Kidney - Tumor)")
-    final_scene = processMesh.subtract_tumor_from_kidney(final_scene)
+    final_scene = processMesh.subtract_tumor_from_kidney_blender(final_scene)
 
     # save_dir = os.path.join(base_path, '3d')
     # os.makedirs(save_dir, exist_ok=True)

@@ -3,6 +3,9 @@ import numpy as np
 import pyvista as pv
 import open3d as o3d
 import manifold3d
+import subprocess
+import tempfile
+import os
 
 
 def default_dilation(mesh: pv.PolyData, offset: float = 0.5) -> pv.PolyData:
@@ -278,3 +281,327 @@ def subtract_tumor_from_kidney(scene: trimesh.Scene) -> trimesh.Scene:
             new_scene.add_geometry(mesh, node_name=name)
 
     return new_scene
+
+
+# Blender 실행 경로 (필요시 수정)
+BLENDER_PATH = r"C:\Program Files\Blender Foundation\Blender 5.0\blender.exe"
+
+# Blender에서 실행할 Python 스크립트 템플릿
+BLENDER_SCRIPT_TEMPLATE = '''
+import bpy
+import sys
+import traceback
+
+# 3D Print Toolbox 애드온 활성화 (Blender 5.0+에서 이름 변경됨)
+PRINT3D_AVAILABLE = False
+for mod_name in ["bl_ext.blender_org.print3d_toolbox", "object_print3d_utils"]:
+    try:
+        bpy.ops.preferences.addon_enable(module=mod_name)
+        PRINT3D_AVAILABLE = True
+        print(f"[Blender] 3D Print Toolbox enabled ({{mod_name}})")
+        break
+    except:
+        continue
+
+if not PRINT3D_AVAILABLE:
+    print("[Blender] 3D Print Toolbox not available, using fallback")
+
+def make_manifold(obj):
+    """3D Print Toolbox의 Make Manifold로 watertight 메시 생성"""
+    bpy.context.view_layer.objects.active = obj
+    obj.select_set(True)
+
+    if PRINT3D_AVAILABLE:
+        try:
+            # 3D Print Toolbox의 Make Manifold (가장 효과적)
+            bpy.ops.mesh.print3d_clean_non_manifold()
+            print(f"[Blender] Make Manifold applied to {{obj.name}}")
+        except Exception as e:
+            print(f"[Blender] Make Manifold failed: {{e}}, using fallback")
+            clean_mesh_fallback(obj)
+    else:
+        clean_mesh_fallback(obj)
+
+    obj.select_set(False)
+
+def clean_mesh_fallback(obj):
+    """3D Print Toolbox 없을 때 기본 메시 정리"""
+    bpy.context.view_layer.objects.active = obj
+    obj.select_set(True)
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.select_all(action='SELECT')
+
+    # Fill holes
+    try:
+        bpy.ops.mesh.fill_holes(sides=0)
+    except Exception as e:
+        print(f"[Blender] fill_holes skipped: {{e}}")
+
+    # 중복 버텍스 병합
+    try:
+        bpy.ops.mesh.remove_doubles(threshold=0.0001)
+    except Exception as e:
+        print(f"[Blender] remove_doubles skipped: {{e}}")
+
+    # Normals 통일
+    try:
+        bpy.ops.mesh.normals_make_consistent(inside=False)
+    except Exception as e:
+        print(f"[Blender] normals skipped: {{e}}")
+
+    bpy.ops.object.mode_set(mode='OBJECT')
+    obj.select_set(False)
+
+def boolean_difference(target_obj, cutter_obj):
+    """Boolean difference 연산 수행"""
+    bpy.context.view_layer.objects.active = target_obj
+    target_obj.select_set(True)
+
+    # Boolean modifier 추가
+    bool_mod = target_obj.modifiers.new(name="Boolean", type='BOOLEAN')
+    bool_mod.operation = 'DIFFERENCE'
+    bool_mod.object = cutter_obj
+    bool_mod.solver = 'EXACT'
+
+    # Apply modifier
+    try:
+        bpy.ops.object.modifier_apply(modifier="Boolean")
+        return True
+    except Exception as e:
+        print(f"[Blender] Boolean modifier apply failed: {{e}}")
+        target_obj.modifiers.remove(bool_mod)
+        return False
+    finally:
+        target_obj.select_set(False)
+
+def decimate_mesh(obj, target_vertex_count):
+    """Decimate modifier로 버텍스 수 축소"""
+    bpy.context.view_layer.objects.active = obj
+    obj.select_set(True)
+
+    current_verts = len(obj.data.vertices)
+    if current_verts <= target_vertex_count:
+        print(f"[Blender] {{obj.name}}: vertex count {{current_verts}} <= target {{target_vertex_count}}, skip decimation")
+        obj.select_set(False)
+        return
+
+    # 목표 비율 계산
+    ratio = target_vertex_count / current_verts
+
+    # Decimate modifier 추가
+    decimate = obj.modifiers.new(name="Decimate", type='DECIMATE')
+    decimate.decimate_type = 'COLLAPSE'
+    decimate.ratio = ratio
+
+    try:
+        bpy.ops.object.modifier_apply(modifier="Decimate")
+        new_verts = len(obj.data.vertices)
+        print(f"[Blender] {{obj.name}}: decimated {{current_verts}} -> {{new_verts}} vertices")
+    except Exception as e:
+        print(f"[Blender] Decimate failed for {{obj.name}}: {{e}}")
+        obj.modifiers.remove(decimate)
+
+    obj.select_set(False)
+
+try:
+    # 메인 처리 시작
+    print("[Blender] Starting mesh processing...")
+
+    # 기존 오브젝트 삭제
+    bpy.ops.object.select_all(action='SELECT')
+    bpy.ops.object.delete()
+
+    # GLB 파일 임포트
+    input_path = r"{input_path}"
+    print(f"[Blender] Importing: {{input_path}}")
+    bpy.ops.import_scene.gltf(filepath=input_path)
+
+    # 오브젝트들 분류
+    kidney_objects = []
+    tumor_objects = []
+    other_objects = []
+
+    for obj in bpy.context.scene.objects:
+        if obj.type == 'MESH':
+            name = obj.name
+            print(f"[Blender] Found mesh: {{name}}")
+            if name.startswith("Kidney"):
+                kidney_objects.append(obj)
+            elif name.startswith("Tumor"):
+                tumor_objects.append(obj)
+            else:
+                other_objects.append(obj)
+
+    print(f"[Blender] Found {{len(kidney_objects)}} kidney, {{len(tumor_objects)}} tumor meshes")
+
+    # Tumor가 없으면 그대로 저장
+    if not tumor_objects:
+        print("[Blender] No tumor found, exporting as-is")
+        bpy.ops.export_scene.gltf(filepath=r"{output_path}", export_format='GLB')
+        sys.exit(0)
+
+    # Tumor들을 하나로 합치기
+    if len(tumor_objects) > 1:
+        bpy.ops.object.select_all(action='DESELECT')
+        for obj in tumor_objects:
+            obj.select_set(True)
+        bpy.context.view_layer.objects.active = tumor_objects[0]
+        bpy.ops.object.join()
+        combined_tumor = bpy.context.active_object
+        combined_tumor.name = "Combined_Tumor"
+    else:
+        combined_tumor = tumor_objects[0]
+        combined_tumor.name = "Combined_Tumor"
+
+    # Tumor 메시를 watertight로 만들기
+    print("[Blender] Processing tumor mesh...")
+    make_manifold(combined_tumor)
+
+    # 각 Kidney에 대해 Boolean 연산 수행
+    for kidney_obj in kidney_objects:
+        original_name = kidney_obj.name
+        original_vertex_count = len(kidney_obj.data.vertices)
+        print(f"[Blender] Processing {{original_name}} ({{original_vertex_count}} vertices)...")
+
+        # Kidney 메시를 watertight로 만들기
+        make_manifold(kidney_obj)
+
+        # Boolean difference 수행
+        success = boolean_difference(kidney_obj, combined_tumor)
+        if success:
+            print(f"[Blender] Boolean subtraction completed for {{original_name}}")
+            # Boolean 후 버텍스 수 복원을 위해 Decimation 적용
+            decimate_mesh(kidney_obj, original_vertex_count)
+        else:
+            print(f"[Blender] Boolean failed for {{original_name}}, using cleaned mesh")
+
+        kidney_obj.name = original_name
+
+    # Tumor 오브젝트 삭제 (Boolean에 사용된 후)
+    bpy.data.objects.remove(combined_tumor, do_unlink=True)
+
+    # 원래 Tumor들과 기타 메시들 다시 임포트
+    print("[Blender] Re-importing tumor and other meshes...")
+    bpy.ops.import_scene.gltf(filepath=input_path)
+
+    # 새로 임포트된 오브젝트 중 Kidney는 제거 (이미 처리된 것 사용)
+    for obj in list(bpy.context.selected_objects):
+        if obj.type == 'MESH':
+            # Kidney로 시작하면 제거 (처리된 버전 유지)
+            if obj.name.startswith("Kidney"):
+                bpy.data.objects.remove(obj, do_unlink=True)
+            # Tumor나 기타 메시는 유지
+
+    # 결과 내보내기
+    output_path = r"{output_path}"
+    print(f"[Blender] Exporting to: {{output_path}}")
+    bpy.ops.export_scene.gltf(filepath=output_path, export_format='GLB')
+    print("[Blender] Done!")
+
+except Exception as e:
+    print(f"[Blender] ERROR: {{e}}")
+    traceback.print_exc()
+    sys.exit(1)
+'''
+
+
+def subtract_tumor_from_kidney_blender(
+    scene: trimesh.Scene,
+    blender_path: str = None
+) -> trimesh.Scene:
+    """
+    Blender를 사용하여 Kidney 메시에서 Tumor를 Boolean Difference로 뺍니다.
+
+    3D Print Toolbox 애드온의 Make Manifold 기능으로 메시를 정리한 후
+    Boolean EXACT solver로 연산을 수행합니다.
+
+    Args:
+        scene: 입력 trimesh Scene
+        blender_path: Blender 실행 파일 경로 (None이면 기본 경로 사용)
+
+    Returns:
+        Boolean 연산이 완료된 trimesh Scene
+    """
+    if blender_path is None:
+        blender_path = BLENDER_PATH
+
+    # Blender 존재 확인
+    if not os.path.exists(blender_path):
+        print(f"[WARN] Blender not found at {blender_path}, falling back to manifold3d")
+        return subtract_tumor_from_kidney(scene)
+
+    # Tumor 존재 확인
+    tumor_exists = any(name.startswith("Tumor") for name in scene.geometry.keys())
+    if not tumor_exists:
+        print("[INFO] No tumor meshes found, skipping boolean subtraction")
+        return scene
+
+    # 임시 파일 생성
+    with tempfile.TemporaryDirectory() as temp_dir:
+        input_path = os.path.join(temp_dir, "input.glb")
+        output_path = os.path.join(temp_dir, "output.glb")
+        script_path = os.path.join(temp_dir, "blender_script.py")
+
+        # 입력 Scene을 GLB로 저장
+        scene.export(input_path)
+
+        # Blender 스크립트 생성
+        script_content = BLENDER_SCRIPT_TEMPLATE.format(
+            input_path=input_path.replace("\\", "\\\\"),
+            output_path=output_path.replace("\\", "\\\\")
+        )
+
+        with open(script_path, 'w', encoding='utf-8') as f:
+            f.write(script_content)
+
+        # Blender 실행
+        print(f"[INFO] Running Blender for boolean subtraction...")
+        try:
+            result = subprocess.run(
+                [blender_path, "--background", "--python", script_path],
+                capture_output=True,
+                text=True,
+                timeout=120  # 2분 타임아웃
+            )
+
+            # Blender 출력 표시 (디버그용 전체 출력)
+            if result.stdout:
+                for line in result.stdout.split('\n'):
+                    if line.startswith("[Blender]") or "Error" in line or "error" in line:
+                        print(f"       {line}")
+
+            if result.stderr:
+                # Python traceback이나 에러 메시지 출력
+                stderr_lines = result.stderr.split('\n')
+                error_lines = [l for l in stderr_lines if l.strip() and not l.startswith("Read")]
+                if error_lines:
+                    print(f"[WARN] Blender stderr:")
+                    for line in error_lines[-10:]:  # 마지막 10줄만
+                        print(f"       {line}")
+
+            if result.returncode != 0:
+                print(f"[WARN] Blender exited with code {result.returncode}")
+                return scene
+
+            # 결과 로드
+            if os.path.exists(output_path):
+                result_scene = trimesh.load(output_path)
+
+                # trimesh.load가 Scene이 아닌 경우 처리
+                if isinstance(result_scene, trimesh.Trimesh):
+                    new_scene = trimesh.Scene()
+                    new_scene.add_geometry(result_scene)
+                    result_scene = new_scene
+
+                print(f"[INFO] Boolean subtraction completed via Blender")
+                return result_scene
+            else:
+                print(f"[WARN] Blender output file not found")
+                return scene
+
+        except subprocess.TimeoutExpired:
+            print(f"[WARN] Blender timed out, using original scene")
+            return scene
+        except Exception as e:
+            print(f"[WARN] Blender execution failed: {e}")
+            return scene

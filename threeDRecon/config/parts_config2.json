@@ -11,7 +11,7 @@
     "simplification_kwargs": null
   },
   {
-    "name": "Kidney-L",
+    "name": "Kidney",
     "smoothing_func": null,
     "smoothing_kwargs": null,
     "dilation_func": null,
@@ -20,27 +20,7 @@
     "simplification_kwargs": null
   },
   {
-    "name": "Kidney-R",
-    "smoothing_func": null,
-    "smoothing_kwargs": null,
-    "dilation_func": null,
-    "dilation_kwargs": null,
-    "simplification_func": null,
-    "simplification_kwargs": null
-  },
-  {
-    "name": "Fat-L",
-    "smoothing_func": null,
-    "smoothing_kwargs": null,
-    "dilation_func": "default",
-    "dilation_kwargs": {
-      "offset": 0.5
-    },
-    "simplification_func": null,
-    "simplification_kwargs": null
-  },
-  {
-    "name": "Fat-R",
+    "name": "Fat",
     "smoothing_func": null,
     "smoothing_kwargs": null,
     "dilation_func": "default",

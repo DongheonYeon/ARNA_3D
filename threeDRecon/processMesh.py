@@ -35,11 +35,35 @@ def mesh_smoothing(
         None: lambda mesh, **kwargs: mesh
     }
 
-    mesh = scene.geometry.get(part_name)
-    if mesh is None:
+    # part_name과 정확히 일치하거나 "part_name-" 으로 시작하는 모든 geometry 찾기
+    matching_names = [name for name in scene.geometry.keys()
+                      if name == part_name or name.startswith(f"{part_name}-")]
+
+    if not matching_names:
         print(f"[WARN] Skipping {part_name}: mesh not found in scene.")
         return
 
+    # 매칭된 각 geometry에 대해 처리
+    for matched_name in matching_names:
+        mesh = scene.geometry.get(matched_name)
+        if mesh is None:
+            continue
+
+        _process_single_mesh(
+            mesh, matched_name, new_scene,
+            smoothing_func, smoothing_kwargs,
+            dilation_func, dilation_kwargs,
+            simplification_func, simplification_kwargs,
+            SMOOTHING_FUNC_MAP, DILATION_FUNC_MAP, SIMPLIFICATION_FUNC_MAP
+        )
+
+def _process_single_mesh(
+    mesh, part_name, new_scene,
+    smoothing_func, smoothing_kwargs,
+    dilation_func, dilation_kwargs,
+    simplification_func, simplification_kwargs,
+    SMOOTHING_FUNC_MAP, DILATION_FUNC_MAP, SIMPLIFICATION_FUNC_MAP
+    ):
     print(f"[INFO] Processing {part_name}")
     # Convert to PyVista PolyData: faces=[n, v0, v1, v2, ...]
     vertices = mesh.vertices
@@ -48,19 +72,19 @@ def mesh_smoothing(
 
     # Dilation
     if dilation_func:
-        dilation_func = DILATION_FUNC_MAP.get(dilation_func)
-        if dilation_func is None:
-            raise ValueError(f"[ERROR] Unknown dilation_type: {dilation_type}")
+        dilation_fn = DILATION_FUNC_MAP.get(dilation_func)
+        if dilation_fn is None:
+            raise ValueError(f"[ERROR] Unknown dilation_func: {dilation_func}")
         print(f"{'':7}- Apply Dilation")
-        pv_mesh = dilation_func(pv_mesh, **(dilation_kwargs or {}))
+        pv_mesh = dilation_fn(pv_mesh, **(dilation_kwargs or {}))
 
     # Smoothing
     if smoothing_func:
-        smoothing_func = SMOOTHING_FUNC_MAP.get(smoothing_func)
-        if smoothing_func is None:
-            raise ValueError(f"[ERROR] Unknown smoothing_type: {smoothing_type}")
+        smoothing_fn = SMOOTHING_FUNC_MAP.get(smoothing_func)
+        if smoothing_fn is None:
+            raise ValueError(f"[ERROR] Unknown smoothing_func: {smoothing_func}")
         print(f"{'':7}- Apply Smoothing")
-        pv_mesh = smoothing_func(pv_mesh, **(smoothing_kwargs or {}))
+        pv_mesh = smoothing_fn(pv_mesh, **(smoothing_kwargs or {}))
 
     # Simplification (by Decimation)
     if simplification_func:

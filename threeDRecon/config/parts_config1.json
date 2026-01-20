@@ -18,7 +18,7 @@
     }
   },
   {
-    "name": "Kidney-L",
+    "name": "Kidney",
     "smoothing_func": "taubin",
     "smoothing_kwargs": {
       "n_iter": 100,
@@ -36,43 +36,7 @@
     }
   },
   {
-    "name": "Kidney-R",
-    "smoothing_func": "taubin",
-    "smoothing_kwargs": {
-      "n_iter": 100,
-      "pass_band": 0.001,
-      "feature_angle": 200.0,
-      "boundary_smoothing": true,
-      "feature_smoothing": true,
-      "non_manifold_smoothing": true
-    },
-    "dilation_func": null,
-    "dilation_kwargs": null,
-    "simplification_func": "decimate",
-    "simplification_kwargs": {
-      "target_reduction": 0.9
-    }
-  },
-  {
-    "name": "Fat-L",
-    "smoothing_func": "taubin",
-    "smoothing_kwargs": {
-      "n_iter": 100,
-      "pass_band": 0.001,
-      "feature_angle": 200.0,
-      "boundary_smoothing": true,
-      "feature_smoothing": true,
-      "non_manifold_smoothing": true
-    },
-    "dilation_func": null,
-    "dilation_kwargs": null,
-    "simplification_func": "decimate",
-    "simplification_kwargs": {
-      "target_reduction": 0.9
-    }
-  },
-  {
-    "name": "Fat-R",
+    "name": "Fat",
     "smoothing_func": "taubin",
     "smoothing_kwargs": {
       "n_iter": 100,

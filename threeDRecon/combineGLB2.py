@@ -157,6 +157,26 @@ def make_glb(temp_path, temp_kidney_path):
                 part_name = f"{label_name}-{side}"
                 part.metadata["name"] = part_name
                 scene.add_geometry(part, node_name=part_name)
+        elif label_name == "Tumor":
+            parts = base_mesh.split(only_watertight=False)
+            if not parts:
+                continue
+            # 내부 빈 공간 메시 제거 (음수 볼륨 또는 다른 메시에 포함된 경우)
+            valid_parts = []
+            for part in parts:
+                # 볼륨이 음수면 내부 공간 (노멀이 안쪽을 향함)
+                if part.is_watertight and part.volume < 0:
+                    print(f"[INFO] Tumor 내부 공간 제거 (음수 볼륨: {part.volume:.2f})")
+                    continue
+                valid_parts.append(part)
+
+            if not valid_parts:
+                continue
+            valid_parts = sorted(valid_parts, key=lambda m: len(m.faces), reverse=True)
+            for i, part in enumerate(valid_parts, start=1):
+                part_name = f"{label_name}-{i}"
+                part.metadata["name"] = part_name
+                scene.add_geometry(part, node_name=part_name)
         else:
             base_mesh.metadata["name"] = label_name
             scene.add_geometry(base_mesh, node_name=label_name)

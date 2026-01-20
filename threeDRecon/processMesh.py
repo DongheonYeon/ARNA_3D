@@ -2,7 +2,7 @@ import trimesh
 import numpy as np
 import pyvista as pv
 import open3d as o3d
-from trimesh import boolean
+import manifold3d
 
 
 def default_dilation(mesh: pv.PolyData, offset: float = 0.5) -> pv.PolyData:
@@ -195,6 +195,23 @@ def process_poisson(scene):
     return rec_scene
 
 
+def trimesh_to_manifold(mesh: trimesh.Trimesh) -> manifold3d.Manifold:
+    """trimesh를 manifold3d 객체로 변환"""
+    mesh_data = manifold3d.Mesh(
+        vert_properties=np.array(mesh.vertices, dtype=np.float32),
+        tri_verts=np.array(mesh.faces, dtype=np.uint32)
+    )
+    return manifold3d.Manifold(mesh_data)
+
+
+def manifold_to_trimesh(manifold: manifold3d.Manifold) -> trimesh.Trimesh:
+    """manifold3d 객체를 trimesh로 변환"""
+    mesh_data = manifold.to_mesh()
+    vertices = mesh_data.vert_properties[:, :3]  # xyz 좌표만 추출
+    faces = mesh_data.tri_verts
+    return trimesh.Trimesh(vertices=vertices, faces=faces)
+
+
 def subtract_tumor_from_kidney(scene: trimesh.Scene) -> trimesh.Scene:
     """
     Kidney 메시에서 Tumor 메시를 Boolean Difference로 빼서
@@ -225,6 +242,13 @@ def subtract_tumor_from_kidney(scene: trimesh.Scene) -> trimesh.Scene:
 
     print(f"[INFO] Boolean subtraction: {len(tumor_meshes)} tumor(s) from kidney")
 
+    # Tumor를 manifold로 변환
+    try:
+        tumor_manifold = trimesh_to_manifold(combined_tumor)
+    except Exception as e:
+        print(f"[WARN] Failed to convert tumor to manifold: {e}")
+        return scene
+
     # Kidney 메시들 처리 (Kidney-L, Kidney-R)
     new_scene = trimesh.Scene()
 
@@ -232,12 +256,16 @@ def subtract_tumor_from_kidney(scene: trimesh.Scene) -> trimesh.Scene:
         if name.startswith("Kidney"):
             try:
                 # Boolean difference: Kidney - Tumor
-                result = trimesh.boolean.difference([mesh, combined_tumor], engine="blender")
-                if result is None or result.is_empty:
-                    print(f"[WARN] Boolean difference failed for {name}, using original mesh")
+                kidney_manifold = trimesh_to_manifold(mesh)
+                result_manifold = kidney_manifold - tumor_manifold
+
+                if result_manifold.is_empty():
+                    print(f"[WARN] Boolean difference result empty for {name}, using original mesh")
                     result = mesh
                 else:
+                    result = manifold_to_trimesh(result_manifold)
                     print(f"[INFO] Boolean subtraction completed for {name}")
+
                 result.metadata["name"] = name
                 new_scene.add_geometry(result, node_name=name)
             except Exception as e:

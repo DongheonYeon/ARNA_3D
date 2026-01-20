@@ -2,6 +2,7 @@ import trimesh
 import numpy as np
 import pyvista as pv
 import open3d as o3d
+from trimesh import boolean
 
 
 def default_dilation(mesh: pv.PolyData, offset: float = 0.5) -> pv.PolyData:
@@ -192,3 +193,60 @@ def process_poisson(scene):
             rec_scene.add_geometry(mesh, node_name=name)
 
     return rec_scene
+
+
+def subtract_tumor_from_kidney(scene: trimesh.Scene) -> trimesh.Scene:
+    """
+    Kidney 메시에서 Tumor 메시를 Boolean Difference로 빼서
+    Z-fighting과 가림 현상을 방지합니다.
+
+    스무딩이 완료된 후 호출해야 합니다.
+    """
+    # scene에서 geometry 추출
+    geometry_dict = dict(scene.geometry)
+
+    # Tumor 메시들 수집 (Tumor-1, Tumor-2, ... 형태)
+    tumor_meshes = []
+    tumor_names = []
+    for name, mesh in geometry_dict.items():
+        if name.startswith("Tumor"):
+            tumor_meshes.append(mesh)
+            tumor_names.append(name)
+
+    if not tumor_meshes:
+        print("[INFO] No tumor meshes found, skipping boolean subtraction")
+        return scene
+
+    # Tumor 메시들을 하나로 병합
+    if len(tumor_meshes) == 1:
+        combined_tumor = tumor_meshes[0]
+    else:
+        combined_tumor = trimesh.util.concatenate(tumor_meshes)
+
+    print(f"[INFO] Boolean subtraction: {len(tumor_meshes)} tumor(s) from kidney")
+
+    # Kidney 메시들 처리 (Kidney-L, Kidney-R)
+    new_scene = trimesh.Scene()
+
+    for name, mesh in geometry_dict.items():
+        if name.startswith("Kidney"):
+            try:
+                # Boolean difference: Kidney - Tumor
+                result = trimesh.boolean.difference([mesh, combined_tumor], engine="blender")
+                if result is None or result.is_empty:
+                    print(f"[WARN] Boolean difference failed for {name}, using original mesh")
+                    result = mesh
+                else:
+                    print(f"[INFO] Boolean subtraction completed for {name}")
+                result.metadata["name"] = name
+                new_scene.add_geometry(result, node_name=name)
+            except Exception as e:
+                print(f"[WARN] Boolean operation failed for {name}: {e}, using original mesh")
+                mesh.metadata["name"] = name
+                new_scene.add_geometry(mesh, node_name=name)
+        else:
+            # Kidney가 아닌 메시는 그대로 추가
+            mesh.metadata["name"] = name
+            new_scene.add_geometry(mesh, node_name=name)
+
+    return new_scene

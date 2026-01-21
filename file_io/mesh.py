@@ -109,7 +109,7 @@ def save_debug_scene(
         return None
 
     if scene is None:
-        logger.warning(f"Skipping debug save: scene is None ({tag})")
+        logger.warning(f"Skip debug save: scene is None ({tag})")
         return None
 
     save_dir = Path(save_dir)

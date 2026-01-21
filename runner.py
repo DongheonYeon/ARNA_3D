@@ -8,7 +8,6 @@ from config.logger import logger
 from domain.types import VolumeData, MeshCollection
 from file_io.nifti import load_nifti
 from file_io.mesh import save_scene, save_debug_scene
-from file_io.temp import TempFileManager
 from threeDrecon.segmentation.preprocessing import (
     preprocess_segmentation,
     merge_tumor_to_kidney,
@@ -52,17 +51,11 @@ class Pipeline:
         # 2. 세그멘테이션 전처리
         logger.debug("Preprocessing segmentation file...")
         processed_volume = preprocess_segmentation(self._volume)
-
-        # 3. 신장용 볼륨 생성 (Tumor → Kidney 병합)
         kidney_volume = merge_tumor_to_kidney(processed_volume)
 
-        # 4. 임시 파일로 저장 후 메시 추출
-        with TempFileManager(prefix="arna3d_") as temp_mgr:
-            temp_nifti = temp_mgr.save_volume_temp(processed_volume, "processed.nii.gz")
-            temp_kidney = temp_mgr.save_volume_temp(kidney_volume, "kidney.nii.gz")
-
-            logger.debug("Extracting Mesh from volume...")
-            self._meshes = extract_meshes_from_volume(temp_nifti, temp_kidney)
+        # 4. 메시 추출 (in-memory)
+        logger.debug("Extracting Mesh from volume...")
+        self._meshes = extract_meshes_from_volume(processed_volume, kidney_volume)
 
         # 디버그 저장 (step1 전)
         self._save_debug("before_step1")

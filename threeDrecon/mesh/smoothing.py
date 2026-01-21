@@ -150,7 +150,7 @@ def smooth_mesh_collection(
         matching = collection.get_by_prefix(config.name)
 
         if not matching:
-            logger.warning(f"Skipping {config.name}: mesh not found in collection.")
+            logger.warning(f"Skip {config.name}: mesh not found in collection.")
             continue
 
         for mesh_name, mesh in matching:

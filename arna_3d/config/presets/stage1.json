@@ -1,0 +1,130 @@
+[
+  {
+    "name": "Tumor",
+    "smoothing_func": "taubin",
+    "smoothing_kwargs": {
+      "n_iter": 80,
+      "pass_band": 0.001,
+      "feature_angle": 180.0,
+      "boundary_smoothing": true,
+      "feature_smoothing": true,
+      "non_manifold_smoothing": true
+    },
+    "dilation_func": null,
+    "dilation_kwargs": null,
+    "simplification_func": "decimate",
+    "simplification_kwargs": {
+      "target_reduction": 0.9
+    }
+  },
+  {
+    "name": "Kidney",
+    "smoothing_func": "taubin",
+    "smoothing_kwargs": {
+      "n_iter": 80,
+      "pass_band": 0.001,
+      "feature_angle": 180.0,
+      "boundary_smoothing": true,
+      "feature_smoothing": true,
+      "non_manifold_smoothing": true
+    },
+    "dilation_func": null,
+    "dilation_kwargs": null,
+    "simplification_func": "decimate",
+    "simplification_kwargs": {
+      "target_reduction": 0.9
+    }
+  },
+  {
+    "name": "Fat",
+    "smoothing_func": "taubin",
+    "smoothing_kwargs": {
+      "n_iter": 100,
+      "pass_band": 0.001,
+      "feature_angle": 200.0,
+      "boundary_smoothing": true,
+      "feature_smoothing": true,
+      "non_manifold_smoothing": true
+    },
+    "dilation_func": null,
+    "dilation_kwargs": null,
+    "simplification_func": "decimate",
+    "simplification_kwargs": {
+      "target_reduction": 0.9
+    }
+  },
+  {
+    "name": "Artery",
+    "smoothing_func": "taubin",
+    "smoothing_kwargs": {
+      "n_iter": 80,
+      "pass_band": 0.01,
+      "feature_angle": 150.0,
+      "boundary_smoothing": true,
+      "feature_smoothing": true,
+      "non_manifold_smoothing": true
+    },
+    "dilation_func": "default",
+    "dilation_kwargs": {
+      "offset": 0.5
+    },
+    "simplification_func": null,
+    "simplification_kwargs": null
+  },
+  {
+    "name": "Vein",
+    "smoothing_func": "taubin",
+    "smoothing_kwargs": {
+      "n_iter": 80,
+      "pass_band": 0.01,
+      "feature_angle": 150.0,
+      "boundary_smoothing": true,
+      "feature_smoothing": true,
+      "non_manifold_smoothing": true
+    },
+    "dilation_func": "default",
+    "dilation_kwargs": {
+      "offset": 0.5
+    },
+    "simplification_func": null,
+    "simplification_kwargs": null
+  },
+  {
+    "name": "Renal_a",
+    "smoothing_func": null,
+    "smoothing_kwargs": null,
+    "dilation_func": "default",
+    "dilation_kwargs": {
+      "offset": 0.2
+    },
+    "simplification_func": null,
+    "simplification_kwargs": null
+  },
+  {
+    "name": "Renal_v",
+    "smoothing_func": null,
+    "smoothing_kwargs": null,
+    "dilation_func": "default",
+    "dilation_kwargs": {
+      "offset": 0.2
+    },
+    "simplification_func": null,
+    "simplification_kwargs": null
+  },
+  {
+    "name": "Ureter",
+    "smoothing_func": "taubin",
+    "smoothing_kwargs": {
+      "n_iter": 20,
+      "pass_band": 0.1,
+      "feature_angle": 100.0,
+      "boundary_smoothing": true,
+      "feature_smoothing": true,
+      "non_manifold_smoothing": true
+    },
+    "dilation_func": null,
+    "dilation_kwargs": null,
+    "simplification_func": null,
+    "simplification_kwargs": null
+  }
+]

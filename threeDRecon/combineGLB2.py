@@ -4,21 +4,6 @@ import numpy as np
 from vtk.util import numpy_support
 from vtk.util.numpy_support import vtk_to_numpy
 import trimesh
-from pygltflib import (
-    GLTF2,
-    Scene,
-    Node,
-    Mesh,
-    Material,
-    Primitive,
-    BufferFormat,
-    Asset,
-    Buffer,
-    BufferView,
-    Accessor,
-    Attributes,
-    PbrMetallicRoughness,
-)
 
 # ----------------------------------------------------------------------------
 # 라벨 이름 매핑

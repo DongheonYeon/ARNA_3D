@@ -11,6 +11,7 @@ import shutil
 from typing import Generator
 import SimpleITK as sitk
 
+from config.logger import logger
 from core.types import VolumeData
 from file_io.nifti import volume_to_sitk
 
@@ -49,14 +50,14 @@ class TempFileManager:
                 if temp_file.exists():
                     temp_file.unlink()
             except Exception as e:
-                print(f"[WARN] 임시 파일 삭제 실패: {temp_file} - {e}")
+                logger.warning(f"Failed to delete temp file: {temp_file} - {e}")
 
         # 임시 디렉토리 삭제
         if self._temp_dir and self._temp_dir.exists():
             try:
                 shutil.rmtree(self._temp_dir)
             except Exception as e:
-                print(f"[WARN] 임시 디렉토리 삭제 실패: {self._temp_dir} - {e}")
+                logger.warning(f"Failed to delete temp directory: {self._temp_dir} - {e}")
 
         self._temp_files.clear()
         self._temp_dir = None

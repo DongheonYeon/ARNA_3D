@@ -7,6 +7,7 @@
 import trimesh
 
 from config.constants import MorphologyParams
+from config.logger import logger
 
 
 def split_bilateral(
@@ -53,7 +54,7 @@ def filter_valid_tumors(meshes: list[trimesh.Trimesh]) -> list[trimesh.Trimesh]:
     for part in meshes:
         # 볼륨이 음수면 내부 공간 (노멀이 안쪽을 향함)
         if part.is_watertight and part.volume < 0:
-            print(f"[INFO] Tumor 내부 공간 제거 (음수 볼륨: {part.volume:.2f})")
+            logger.debug(f"Removing tumor cavity (negative volume: {part.volume:.2f})")
             continue
         valid_parts.append(part)
 

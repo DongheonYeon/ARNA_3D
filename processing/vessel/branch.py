@@ -7,6 +7,7 @@
 import numpy as np
 
 from config.constants import Label, VesselParams
+from config.logger import logger
 from core.exceptions import VesselProcessingError
 from processing.vessel.analysis import get_largest_component, detect_gradient_range
 from processing.vessel.interpolation import interpolate_circle_bridge, interpolate_ellipse_bridge
@@ -60,13 +61,13 @@ def process_artery_branches(
     zf, zb = detect_gradient_range(artery_mask, z_start, z_end, percentile=percentile)
 
     artery_range = zb - zf + 1 if (zf is not None and zb is not None) else total_slices
-    print(f"[INFO] Artery: index=[{zf}-{zb}], gradient range={artery_range}/{total_slices} ({artery_range/total_slices*100:.1f}%)")
+    logger.debug(f"Artery: index=[{zf}-{zb}], gradient range={artery_range}/{total_slices} ({artery_range/total_slices*100:.1f}%)")
 
     if artery_range < total_slices * threshold and zf is not None and zb is not None:
         artery_bridged, _ = interpolate_circle_bridge(artery_mask, zf, zb)
         return extract_branches(artery_mask, artery_bridged, top_n=2)
     else:
-        print("[WARN] Artery: gradient range exceeded - return zero array")
+        logger.warning("Artery: gradient range exceeded - return zero array")
         return np.zeros_like(artery_mask)
 
 
@@ -97,13 +98,13 @@ def process_vein_branches(
     zf, zb = detect_gradient_range(vein_mask, z_start, z_end, percentile=percentile)
 
     vein_range = zb - zf + 1 if (zf is not None and zb is not None) else total_slices
-    print(f"[INFO] Vein  : index=[{zf}-{zb}], gradient range={vein_range}/{total_slices} ({vein_range/total_slices*100:.1f}%)")
+    logger.debug(f"Vein  : index=[{zf}-{zb}], gradient range={vein_range}/{total_slices} ({vein_range/total_slices*100:.1f}%)")
 
     if vein_range < total_slices * threshold and zf is not None and zb is not None:
         vein_bridged = interpolate_ellipse_bridge(vein_mask, zf, zb)
         return extract_branches(vein_mask, vein_bridged, top_n=2)
     else:
-        print("[WARN] Vein: gradient range exceeded - return zero array")
+        logger.warning("Vein: gradient range exceeded - return zero array")
         return np.zeros_like(vein_mask)
 
 
@@ -134,16 +135,16 @@ def process_vessel_branches(
         if artery_mask.any():
             renal_a = process_artery_branches(artery_mask, z_start, z_end)
         else:
-            print("[WARN] Artery: label not found, skipping.")
+            logger.warning("Artery: label not found, skipping.")
 
         # 정맥 처리
         if vein_mask.any():
             renal_v = process_vein_branches(vein_mask, z_start, z_end)
         else:
-            print("[WARN] Vein: label not found, skipping.")
+            logger.warning("Vein: label not found, skipping.")
 
         return renal_a, renal_v
 
     except Exception as e:
-        print(f"[ERROR] Vessel processing failed: {e} - return zero array")
+        logger.error(f"Vessel processing failed: {e} - return zero array", exception=e)
         return renal_a, renal_v

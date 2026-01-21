@@ -7,6 +7,7 @@ trimesh를 사용하여 GLB/OBJ 파일을 읽고 씁니다.
 from pathlib import Path
 import trimesh
 
+from config.logger import logger
 from core.types import MeshCollection
 from core.exceptions import MeshExtractionError
 
@@ -27,12 +28,12 @@ def load_mesh(file_path: Path | str) -> trimesh.Trimesh:
     file_path = Path(file_path)
 
     if not file_path.exists():
-        raise MeshExtractionError(f"파일을 찾을 수 없습니다: {file_path}")
+        raise MeshExtractionError(f"File not found: {file_path}")
 
     try:
         return trimesh.load(str(file_path))
     except Exception as e:
-        raise MeshExtractionError(f"메시 로드 실패: {file_path} - {e}") from e
+        raise MeshExtractionError(f"Fail to load mesh: {file_path} - {e}") from e
 
 
 def save_mesh(mesh: trimesh.Trimesh, file_path: Path | str) -> Path:
@@ -110,7 +111,7 @@ def save_debug_scene(
         return None
 
     if scene is None:
-        print(f"[WARN] 디버그 저장 건너뜀: scene이 None ({tag})")
+        logger.warning(f"Skipping debug save: scene is None ({tag})")
         return None
 
     save_dir = Path(save_dir)
@@ -120,8 +121,8 @@ def save_debug_scene(
 
     try:
         scene.export(str(out_path))
-        print(f"[DEBUG] 저장됨: {out_path}")
+        logger.debug(f"Saved: {out_path}")
         return out_path
     except Exception as e:
-        print(f"[WARN] 디버그 저장 실패 ({tag}): {e}")
+        logger.warning(f"Failed to save debug file ({tag}): {e}")
         return None

@@ -1,6 +1,7 @@
 import argparse
 from pathlib import Path
 from pipeline import run_pipeline
+from config.logger import logger
 
 def main():
     parser = argparse.ArgumentParser(
@@ -32,9 +33,6 @@ def main():
         output_dir=args.output_dir,
         debug=args.debug,
     )
-
-    print(f"\n결과 파일: {result_path}")
-
 
 if __name__ == "__main__":
     main()

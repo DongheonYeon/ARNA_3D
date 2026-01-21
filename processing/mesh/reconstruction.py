@@ -9,6 +9,7 @@ import trimesh
 import open3d as o3d
 
 from config.constants import PoissonParams
+from config.logger import logger
 from core.types import MeshCollection
 from processing.mesh.conversion import trimesh_to_open3d, open3d_to_trimesh
 
@@ -32,7 +33,7 @@ def poisson_reconstruct(
     if not meshes:
         raise ValueError("[ERROR] Input mesh list is empty")
 
-    print(f"{'':7}- Merged mesh: {len(meshes)}")
+    logger.debug(f"       - Merged mesh: {len(meshes)}")
 
     # 메시 병합
     merged = trimesh.util.concatenate(meshes)
@@ -54,7 +55,7 @@ def poisson_reconstruct(
     # 가장 큰 연결 요소만 유지
     components = tri_mesh.split(only_watertight=False)
     if len(components) > 1:
-        print(f"{'':7}- Connected components: {len(components)} - using largest")
+        logger.debug(f"       - Connected components: {len(components)} - using largest")
         tri_mesh = max(components, key=lambda c: c.area)
 
     return tri_mesh
@@ -85,7 +86,7 @@ def process_vessel_reconstruction(collection: MeshCollection) -> MeshCollection:
         if any(name == g or name.startswith(f"{g}-") for g in artery_group)
     ]
     if artery_meshes:
-        print("[INFO] Processing Artery group")
+        logger.debug("Processing Artery group")
         reconstructed_artery = poisson_reconstruct(artery_meshes)
         result.add("Artery", reconstructed_artery)
 
@@ -95,7 +96,7 @@ def process_vessel_reconstruction(collection: MeshCollection) -> MeshCollection:
         if any(name == g or name.startswith(f"{g}-") for g in vein_group)
     ]
     if vein_meshes:
-        print("[INFO] Processing Vein group")
+        logger.debug("Processing Vein group")
         reconstructed_vein = poisson_reconstruct(vein_meshes)
         result.add("Vein", reconstructed_vein)
 

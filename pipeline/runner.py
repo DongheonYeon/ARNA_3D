@@ -9,6 +9,7 @@ from pathlib import Path
 from dataclasses import dataclass, field
 
 from config.settings import PipelineSettings, SmoothingPreset
+from config.logger import logger
 from core.types import VolumeData, MeshCollection
 from file_io.nifti import load_nifti
 from file_io.mesh import save_scene, save_debug_scene
@@ -41,14 +42,14 @@ class Pipeline:
         """
         start_time = time.time()
 
-        print(f"[INFO] 입력 파일: {self.settings.input_path}")
-        print(f"[INFO] Case ID: {self.settings.case_id}, Phase: {self.settings.phase}")
+        logger.debug(f"Starting 3D reconstruction process: {self.settings.input_path}")
+        logger.debug(f"Case ID: {self.settings.case_id}, Phase: {self.settings.phase}")
 
         # 1. NIfTI 로드
         self._volume = load_nifti(self.settings.input_path)
 
         # 2. 세그멘테이션 전처리
-        print("[INFO] 세그멘테이션 전처리 중...")
+        logger.debug("Preprocessing segmentation file...")
         processed_volume = preprocess_segmentation(self._volume)
 
         # 3. 신장용 볼륨 생성 (Tumor → Kidney 병합)
@@ -59,25 +60,25 @@ class Pipeline:
             temp_nifti = temp_mgr.save_volume_temp(processed_volume, "processed.nii.gz")
             temp_kidney = temp_mgr.save_volume_temp(kidney_volume, "kidney.nii.gz")
 
-            print("[INFO] 메시 추출 중...")
+            logger.debug("Extracting Mesh from volume...")
             self._meshes = extract_meshes_from_volume(temp_nifti, temp_kidney)
 
         # 디버그 저장 (step1 전)
         self._save_debug("before_step1")
 
         # 5. 1단계 스무딩
-        print("[INFO] Step 1: 스무딩 적용 중...")
+        logger.debug("Step 1 in progress...")
         stage1_preset = self.settings.load_stage1_preset()
         self._meshes = smooth_mesh_collection(self._meshes, list(stage1_preset))
 
         self._save_debug("after_step1")
 
         # 6. Poisson 재구성
-        print("[INFO] Poisson 재구성 중...")
+        logger.debug("Applying poisson reconstruction...")
         self._meshes = process_vessel_reconstruction(self._meshes)
 
         # 7. 2단계 스무딩
-        print("[INFO] Step 2: 마무리 스무딩 중...")
+        logger.debug("Step 2 in progress...")
         stage2_preset = self.settings.load_stage2_preset()
         self._meshes = smooth_mesh_collection(self._meshes, list(stage2_preset))
 
@@ -85,8 +86,8 @@ class Pipeline:
         output_path = self._save_result()
 
         elapsed = time.time() - start_time
-        print(f"[INFO] 완료. 소요 시간: {elapsed:.2f}초")
-        print(f"[INFO] 저장 위치: {output_path}")
+        logger.debug(f"Process complete. Elapsed time: {elapsed:.2f}s")
+        logger.debug(f"Output path: {output_path}")
 
         return output_path
 

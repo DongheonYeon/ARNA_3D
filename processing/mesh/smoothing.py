@@ -8,6 +8,7 @@ import pyvista as pv
 import trimesh
 
 from config.settings import SmoothingConfig
+from config.logger import logger
 from core.types import MeshCollection
 from processing.mesh.conversion import trimesh_to_pyvista, pyvista_to_trimesh
 
@@ -84,7 +85,7 @@ def apply_simplification(
     """
     func = SIMPLIFICATION_FUNC_MAP.get(method)
     if func is None:
-        print(f"[WARN] 알 수 없는 simplification 방법: {method}")
+        logger.warning(f"Unknown simplification method: {method}")
         return pv_mesh
 
     return func(pv_mesh, **kwargs)
@@ -104,12 +105,12 @@ def process_single_mesh(
     Returns:
         처리된 메시
     """
-    print(f"[INFO] Processing {config.name}")
+    logger.debug(f"Processing {config.name}")
     pv_mesh = trimesh_to_pyvista(mesh)
 
     # Dilation
     if config.dilation_func:
-        print(f"{'':7}- Apply Dilation")
+        logger.debug(f"       - Apply Dilation")
         if config.dilation_func == "default":
             pv_mesh = apply_dilation(pv_mesh, **config.dilation_kwargs)
         else:
@@ -117,12 +118,12 @@ def process_single_mesh(
 
     # Smoothing
     if config.smoothing_func:
-        print(f"{'':7}- Apply Smoothing")
+        logger.debug(f"       - Apply Smoothing")
         pv_mesh = apply_smoothing(pv_mesh, config.smoothing_func, **config.smoothing_kwargs)
 
     # Simplification
     if config.simplification_func:
-        print(f"{'':7}- Apply Simplification ({config.simplification_func})")
+        logger.debug(f"       - Apply Simplification ({config.simplification_func})")
         pv_mesh = apply_simplification(pv_mesh, config.simplification_func, **config.simplification_kwargs)
 
     return pyvista_to_trimesh(pv_mesh)
@@ -149,7 +150,7 @@ def smooth_mesh_collection(
         matching = collection.get_by_prefix(config.name)
 
         if not matching:
-            print(f"[WARN] Skipping {config.name}: mesh not found in collection.")
+            logger.warning(f"Skipping {config.name}: mesh not found in collection.")
             continue
 
         for mesh_name, mesh in matching:

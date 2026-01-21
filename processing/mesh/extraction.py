@@ -11,6 +11,7 @@ import trimesh
 import numpy as np
 
 from config.constants import LABELS
+from config.logger import logger
 from core.types import MeshCollection
 from core.exceptions import MeshExtractionError
 from processing.mesh.splitting import split_bilateral, filter_valid_tumors
@@ -110,7 +111,7 @@ def extract_meshes_from_volume(
         base_mesh = _extract_single_label(reader, label_value)
 
         if base_mesh is None or base_mesh.faces.size == 0:
-            print(f"[WARN] '{label_name}' 빈 메쉬, skip")
+            logger.warning(f"Skipping {label_name}: label not found.")
             continue
 
         # 신장: L/R 분할

@@ -1,20 +1,21 @@
+import argparse
 import time
 from pathlib import Path
 from dataclasses import dataclass, field
 
 from config.settings import PipelineSettings, SmoothingPreset
 from config.logger import logger
-from core.types import VolumeData, MeshCollection
+from domain.types import VolumeData, MeshCollection
 from file_io.nifti import load_nifti
 from file_io.mesh import save_scene, save_debug_scene
 from file_io.temp import TempFileManager
-from processing.segmentation.preprocessing import (
+from threeDrecon.segmentation.preprocessing import (
     preprocess_segmentation,
     merge_tumor_to_kidney,
 )
-from processing.mesh.extraction import extract_meshes_from_volume
-from processing.mesh.smoothing import smooth_mesh_collection
-from processing.mesh.reconstruction import process_vessel_reconstruction
+from threeDrecon.mesh.extraction import extract_meshes_from_volume
+from threeDrecon.mesh.smoothing import smooth_mesh_collection
+from threeDrecon.mesh.reconstruction import process_vessel_reconstruction
 
 
 @dataclass
@@ -142,3 +143,39 @@ def run_pipeline(
 
     pipeline = Pipeline(settings=settings)
     return pipeline.run()
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="ARNA-3D: NIfTI 세그멘테이션을 3D GLB 모델로 변환",
+    )
+    parser.add_argument(
+        "input_path",
+        type=Path,
+        help="입력 NIfTI 파일 경로 (예: data/case_0001/mask/segment_A.nii.gz)",
+    )
+    parser.add_argument(
+        "--output-dir",
+        "-o",
+        type=Path,
+        default=None,
+        help="출력 디렉토리 (기본: 입력 파일 상위의 3d/ 폴더)",
+    )
+    parser.add_argument(
+        "--debug",
+        "-d",
+        action="store_true",
+        help="디버그 모드 (중간 결과 저장)",
+    )
+
+    args = parser.parse_args()
+
+    run_pipeline(
+        input_path=args.input_path,
+        output_dir=args.output_dir,
+        debug=args.debug,
+    )
+
+
+if __name__ == "__main__":
+    main()

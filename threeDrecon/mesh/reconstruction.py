@@ -10,8 +10,8 @@ import open3d as o3d
 
 from config.constants import PoissonParams
 from config.logger import logger
-from core.types import MeshCollection
-from processing.mesh.conversion import trimesh_to_open3d, open3d_to_trimesh
+from domain.types import MeshCollection
+from threeDrecon.mesh.conversion import trimesh_to_open3d, open3d_to_trimesh
 
 
 def poisson_reconstruct(

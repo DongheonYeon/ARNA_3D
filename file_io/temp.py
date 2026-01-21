@@ -12,7 +12,7 @@ from typing import Generator
 import SimpleITK as sitk
 
 from config.logger import logger
-from core.types import VolumeData
+from domain.types import VolumeData
 from file_io.nifti import volume_to_sitk
 
 

@@ -8,9 +8,9 @@ import numpy as np
 from scipy.ndimage import binary_dilation
 
 from config.constants import Label, MorphologyParams
-from core.types import VolumeData
+from domain.types import VolumeData
 from file_io.nifti import copy_metadata
-from processing.vessel.branch import process_vessel_branches
+from threeDrecon.vessel.branch import process_vessel_branches
 
 
 def apply_fat_dilation(

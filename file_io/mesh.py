@@ -8,7 +8,7 @@ from pathlib import Path
 import trimesh
 
 from config.logger import logger
-from core.types import MeshCollection
+from domain.types import MeshCollection
 
 
 def load_mesh(file_path: Path | str) -> trimesh.Trimesh | None:

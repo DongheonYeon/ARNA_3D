@@ -9,7 +9,7 @@ import numpy as np
 import SimpleITK as sitk
 
 from config.logger import logger
-from core.types import VolumeData
+from domain.types import VolumeData
 
 
 def load_nifti(file_path: Path | str) -> VolumeData | None:

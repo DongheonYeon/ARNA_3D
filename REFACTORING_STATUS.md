@@ -50,18 +50,17 @@ arna_3d/
 │       ├── stage1.json      # 1단계 스무딩 설정 (기존 parts_config1.json 복사)
 │       └── stage2.json      # 2단계 스무딩 설정 (기존 parts_config2.json 복사)
 │
-├── core/                    # [완료] 핵심 데이터 타입
+├── domain/                  # [완료] 핵심 데이터 타입
 │   ├── __init__.py
-│   ├── types.py             # VolumeData, MeshCollection, ProcessingContext
-│   └── exceptions.py        # Arna3DError, VolumeLoadError, MeshExtractionError 등
+│   └── types.py             # VolumeData, MeshCollection, ProcessingContext
 │
-├── io/                      # [완료] 입출력
+├── file_io/                 # [완료] 입출력
 │   ├── __init__.py
 │   ├── nifti.py             # load_nifti(), save_nifti(), volume_to_sitk(), copy_metadata()
 │   ├── mesh.py              # load_mesh(), save_mesh(), save_scene(), save_debug_scene()
 │   └── temp.py              # TempFileManager (context manager), temp_nifti_file()
 │
-├── processing/              # [완료] 처리 로직
+├── threeDrecon/             # [완료] 처리 로직
 │   ├── __init__.py
 │   ├── segmentation/        # 세그멘테이션 전처리
 │   │   ├── __init__.py
@@ -83,15 +82,13 @@ arna_3d/
 │       ├── transform.py     # rotate_and_center_scene(), rotate_and_center_mesh()
 │       └── conversion.py    # trimesh_to_pyvista(), pyvista_to_trimesh(), trimesh_to_open3d()
 │
-└── pipeline/                # [완료] 파이프라인 오케스트레이션
-    ├── __init__.py
-    └── runner.py            # Pipeline 클래스, run_pipeline() 편의 함수
+└── runner.py                # [완료] Pipeline 클래스, run_pipeline() 편의 함수
 ```
 
 ### 2.2 핵심 데이터 클래스
 
 ```python
-# arna_3d/core/types.py
+# arna_3d/domain/types.py
 
 @dataclass
 class VolumeData:
@@ -146,7 +143,7 @@ class PoissonParams:
 ### 2.4 파이프라인 실행 흐름
 
 ```python
-# arna_3d/pipeline/runner.py
+# arna_3d/runner.py
 
 class Pipeline:
     def run(self) -> Path:
@@ -218,21 +215,21 @@ python -m arna_3d ./data/case_S004/mask/segment_A.nii.gz --debug
 
 | 기존 파일 | 기존 함수 | 새 위치 | 새 함수 |
 |----------|----------|---------|---------|
-| `processNii.py` | `get_largest_component()` | `processing/vessel/analysis.py` | `get_largest_component()` |
-| `processNii.py` | `get_radii_array()` | `processing/vessel/analysis.py` | `compute_radii_array()` |
-| `processNii.py` | `get_gradient_range()` | `processing/vessel/analysis.py` | `detect_gradient_range()` |
-| `processNii.py` | `get_zscore_range()` | `processing/vessel/analysis.py` | `detect_zscore_range()` |
-| `processNii.py` | `interpolate_circle_bridge()` | `processing/vessel/interpolation.py` | `interpolate_circle_bridge()` |
-| `processNii.py` | `interpolate_vein()` | `processing/vessel/interpolation.py` | `interpolate_ellipse_bridge()` |
-| `processNii.py` | `process_vessels()` | `processing/vessel/branch.py` | `process_vessel_branches()` |
-| `processNii.py` | `preprocess()` | `processing/segmentation/preprocessing.py` | `preprocess_segmentation()` |
-| `combineGLB2.py` | `make_glb()` | `processing/mesh/extraction.py` | `extract_meshes_from_volume()` |
-| `combineGLB2.py` | `rotate_and_center()` | `processing/mesh/transform.py` | `rotate_and_center_scene()` |
-| `processMesh.py` | `mesh_smoothing()` | `processing/mesh/smoothing.py` | `smooth_mesh_collection()` |
-| `processMesh.py` | `_process_single_mesh()` | `processing/mesh/smoothing.py` | `process_single_mesh()` |
-| `processMesh.py` | `poisson_reconstruction()` | `processing/mesh/reconstruction.py` | `poisson_reconstruct()` |
-| `processMesh.py` | `process_poisson()` | `processing/mesh/reconstruction.py` | `process_vessel_reconstruction()` |
-| `main.py` | `main()` | `pipeline/runner.py` | `Pipeline.run()` |
+| `processNii.py` | `get_largest_component()` | `threeDrecon/vessel/analysis.py` | `get_largest_component()` |
+| `processNii.py` | `get_radii_array()` | `threeDrecon/vessel/analysis.py` | `compute_radii_array()` |
+| `processNii.py` | `get_gradient_range()` | `threeDrecon/vessel/analysis.py` | `detect_gradient_range()` |
+| `processNii.py` | `get_zscore_range()` | `threeDrecon/vessel/analysis.py` | `detect_zscore_range()` |
+| `processNii.py` | `interpolate_circle_bridge()` | `threeDrecon/vessel/interpolation.py` | `interpolate_circle_bridge()` |
+| `processNii.py` | `interpolate_vein()` | `threeDrecon/vessel/interpolation.py` | `interpolate_ellipse_bridge()` |
+| `processNii.py` | `process_vessels()` | `threeDrecon/vessel/branch.py` | `process_vessel_branches()` |
+| `processNii.py` | `preprocess()` | `threeDrecon/segmentation/preprocessing.py` | `preprocess_segmentation()` |
+| `combineGLB2.py` | `make_glb()` | `threeDrecon/mesh/extraction.py` | `extract_meshes_from_volume()` |
+| `combineGLB2.py` | `rotate_and_center()` | `threeDrecon/mesh/transform.py` | `rotate_and_center_scene()` |
+| `processMesh.py` | `mesh_smoothing()` | `threeDrecon/mesh/smoothing.py` | `smooth_mesh_collection()` |
+| `processMesh.py` | `_process_single_mesh()` | `threeDrecon/mesh/smoothing.py` | `process_single_mesh()` |
+| `processMesh.py` | `poisson_reconstruction()` | `threeDrecon/mesh/reconstruction.py` | `poisson_reconstruct()` |
+| `processMesh.py` | `process_poisson()` | `threeDrecon/mesh/reconstruction.py` | `process_vessel_reconstruction()` |
+| `main.py` | `main()` | `runner.py` | `Pipeline.run()` |
 
 ---
 
@@ -295,30 +292,28 @@ arna_3d/config/constants.py
 arna_3d/config/settings.py
 arna_3d/config/presets/stage1.json
 arna_3d/config/presets/stage2.json
-arna_3d/core/__init__.py
-arna_3d/core/exceptions.py
-arna_3d/core/types.py
-arna_3d/io/__init__.py
-arna_3d/io/mesh.py
-arna_3d/io/nifti.py
-arna_3d/io/temp.py
-arna_3d/pipeline/__init__.py
-arna_3d/pipeline/runner.py
-arna_3d/processing/__init__.py
-arna_3d/processing/mesh/__init__.py
-arna_3d/processing/mesh/conversion.py
-arna_3d/processing/mesh/extraction.py
-arna_3d/processing/mesh/reconstruction.py
-arna_3d/processing/mesh/smoothing.py
-arna_3d/processing/mesh/splitting.py
-arna_3d/processing/mesh/transform.py
-arna_3d/processing/segmentation/__init__.py
-arna_3d/processing/segmentation/morphology.py
-arna_3d/processing/segmentation/preprocessing.py
-arna_3d/processing/vessel/__init__.py
-arna_3d/processing/vessel/analysis.py
-arna_3d/processing/vessel/branch.py
-arna_3d/processing/vessel/interpolation.py
+arna_3d/domain/__init__.py
+arna_3d/domain/types.py
+arna_3d/file_io/__init__.py
+arna_3d/file_io/mesh.py
+arna_3d/file_io/nifti.py
+arna_3d/file_io/temp.py
+arna_3d/runner.py
+arna_3d/threeDrecon/__init__.py
+arna_3d/threeDrecon/mesh/__init__.py
+arna_3d/threeDrecon/mesh/conversion.py
+arna_3d/threeDrecon/mesh/extraction.py
+arna_3d/threeDrecon/mesh/reconstruction.py
+arna_3d/threeDrecon/mesh/smoothing.py
+arna_3d/threeDrecon/mesh/splitting.py
+arna_3d/threeDrecon/mesh/transform.py
+arna_3d/threeDrecon/segmentation/__init__.py
+arna_3d/threeDrecon/segmentation/morphology.py
+arna_3d/threeDrecon/segmentation/preprocessing.py
+arna_3d/threeDrecon/vessel/__init__.py
+arna_3d/threeDrecon/vessel/analysis.py
+arna_3d/threeDrecon/vessel/branch.py
+arna_3d/threeDrecon/vessel/interpolation.py
 ```
 
 총 29개 Python 파일 + 2개 JSON 파일 생성됨.

@@ -40,16 +40,15 @@ ARNA-3D/                     # 프로젝트 루트
 │       ├── stage1.json
 │       └── stage2.json
 │
-├── core/                    # 핵심 데이터 타입
-│   ├── types.py             # VolumeData, MeshCollection, ProcessingContext
-│   └── exceptions.py        # 커스텀 예외 클래스
+├── domain/                  # 핵심 데이터 타입
+│   └── types.py             # VolumeData, MeshCollection, ProcessingContext
 │
 ├── file_io/                 # 입출력 (Python 내장 io와 충돌 방지)
 │   ├── nifti.py             # NIfTI 읽기/쓰기
 │   ├── mesh.py              # GLB/OBJ 읽기/쓰기
 │   └── temp.py              # 임시 파일 관리 (context manager)
 │
-├── processing/              # 처리 로직
+├── threeDrecon/             # 처리 로직
 │   ├── segmentation/        # 세그멘테이션 전처리
 │   │   ├── preprocessing.py # 라벨 전처리, Fat dilation
 │   │   └── morphology.py    # 형태학적 연산
@@ -67,8 +66,7 @@ ARNA-3D/                     # 프로젝트 루트
 │       ├── transform.py     # 회전, 중심 이동
 │       └── conversion.py    # trimesh ↔ pyvista ↔ open3d
 │
-├── pipeline/                # 파이프라인 오케스트레이션
-│   └── runner.py            # Pipeline 클래스, run_pipeline()
+├── runner.py                # Pipeline 클래스, run_pipeline()
 │
 └── .legacy/                 # 레거시 코드 (참조용)
     ├── main.py
@@ -146,7 +144,7 @@ data/
 ## Legacy Code (참조용)
 
 기존 코드는 `.legacy/` 폴더에 보관:
-- `main.py` → `pipeline/runner.py`
-- `threeDRecon/processNii.py` → `processing/vessel/`, `processing/segmentation/`
-- `threeDRecon/combineGLB2.py` → `processing/mesh/extraction.py`
-- `threeDRecon/processMesh.py` → `processing/mesh/smoothing.py`, `reconstruction.py`
+- `main.py` → `runner.py`
+- `threeDRecon/processNii.py` → `threeDrecon/vessel/`, `threeDrecon/segmentation/`
+- `threeDRecon/combineGLB2.py` → `threeDrecon/mesh/extraction.py`
+- `threeDRecon/processMesh.py` → `threeDrecon/mesh/smoothing.py`, `reconstruction.py`

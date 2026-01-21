@@ -12,9 +12,9 @@ import numpy as np
 
 from config.constants import LABELS
 from config.logger import logger
-from core.types import MeshCollection
-from processing.mesh.splitting import split_bilateral, filter_valid_tumors
-from processing.mesh.transform import rotate_and_center_scene
+from domain.types import MeshCollection
+from threeDrecon.mesh.splitting import split_bilateral, filter_valid_tumors
+from threeDrecon.mesh.transform import rotate_and_center_scene
 
 
 def _read_nifti_vtk(file_path: Path | str) -> vtk.vtkNIFTIImageReader:

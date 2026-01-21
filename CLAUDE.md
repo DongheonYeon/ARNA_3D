@@ -9,95 +9,142 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-ARNA-3D is a medical image processing pipeline that converts NIfTI segmentation files into high-quality 3D GLB models. It processes kidney segmentation data through a 5-stage pipeline: NIfTI preprocessing, initial GLB generation, first-stage smoothing, Poisson reconstruction, and second-stage smoothing.
+ARNA-3D는 NIfTI 세그멘테이션 파일을 고품질 3D GLB 모델로 변환하는 의료 영상 처리 파이프라인입니다. 5단계 처리를 거칩니다: NIfTI 전처리, 메시 추출, 1단계 스무딩, Poisson 재구성, 2단계 스무딩.
 
 ## Common Commands
 
 ### Running the Pipeline
 
 ```bash
-# Install dependencies
+# 의존성 설치
 pip install -r requirements.txt
 
-# Run the main pipeline with default settings
-python main.py
+# CLI로 실행 (프로젝트 루트에서)
+python __main__.py <input_path> [--output-dir <dir>] [--debug]
 
-# The pipeline processes a single case specified in main.py line 84
-# Modify case_path variable to process different cases
+# 예시
+python __main__.py ./data/case_S004/mask/segment_A.nii.gz --debug
 ```
 
-### Testing
+## Architecture
 
-```bash
-# Run fast test
-python test/fast/main2.py
-
-# Run label conversion test
-python test/labelconvert.py
 ```
-
-## Architecture and Pipeline
-
-The codebase follows a modular architecture with three main processing modules:
+ARNA-3D/                     # 프로젝트 루트
+├── __init__.py              # 패키지 초기화
+├── __main__.py              # CLI 진입점
+│
+├── config/                  # 설정 및 상수
+│   ├── constants.py         # Label enum, 파라미터 상수
+│   ├── settings.py          # PipelineSettings, SmoothingPreset
+│   └── presets/             # 스무딩 프리셋 JSON
+│       ├── stage1.json
+│       └── stage2.json
+│
+├── domain/                  # 핵심 데이터 타입
+│   └── types.py             # VolumeData, MeshCollection, ProcessingContext
+│
+├── file_io/                 # 입출력 (Python 내장 io와 충돌 방지)
+│   ├── nifti.py             # NIfTI 읽기/쓰기
+│   ├── mesh.py              # GLB/OBJ 읽기/쓰기
+│   └── temp.py              # 임시 파일 관리 (context manager)
+│
+├── threeDrecon/             # 처리 로직
+│   ├── segmentation/        # 세그멘테이션 전처리
+│   │   ├── preprocessing.py # 라벨 전처리, Fat dilation
+│   │   └── morphology.py    # 형태학적 연산
+│   │
+│   ├── vessel/              # 혈관 분석
+│   │   ├── analysis.py      # 반경 분석, 범위 탐지
+│   │   ├── interpolation.py # 원형/타원 보간
+│   │   └── branch.py        # 분기 추출
+│   │
+│   └── mesh/                # 메시 처리
+│       ├── extraction.py    # Marching Cubes 추출
+│       ├── splitting.py     # L/R 분할, Tumor 검증
+│       ├── smoothing.py     # Taubin/Laplacian 스무딩
+│       ├── reconstruction.py # Poisson 재구성
+│       ├── transform.py     # 회전, 중심 이동
+│       └── conversion.py    # trimesh ↔ pyvista ↔ open3d
+│
+├── runner.py                # Pipeline 클래스, run_pipeline()
+│
+└── .legacy/                 # 레거시 코드 (참조용)
+    ├── main.py
+    └── threeDRecon/
+```
 
 ### Core Processing Flow
 
-1. **Input**: NIfTI segmentation files (`segment_A.nii.gz`) from `data/case_*/mask/`
-2. **processNii.py**: Medical image preprocessing with morphological operations
-3. **combineGLB.py**: Marching cubes mesh extraction and multi-label handling
-4. **processMesh.py**: Two-stage smoothing pipeline with configurable parameters
-5. **Output**: Final GLB files saved to `data/case_*/3d/obj_A.glb`
+1. **입력**: NIfTI 세그멘테이션 파일 (`segment_A.nii.gz`)
+2. **전처리**: 혈관 분기 자동 분할, Fat dilation
+3. **메시 추출**: Marching Cubes로 각 라벨별 메시 생성
+4. **1단계 스무딩**: 구조별 Taubin/Laplacian 스무딩
+5. **Poisson 재구성**: 혈관 메시 병합 및 재구성
+6. **2단계 스무딩**: 마무리 스무딩
+7. **출력**: GLB 파일 (`obj_A.glb`)
 
-### Key Components
+### Key Data Types
 
-**threeDRecon Module Structure:**
+```python
+# 볼륨 데이터
+VolumeData(array, spacing, origin, direction)
 
-- `processNii.py`: Handles NIfTI preprocessing, connected component analysis, noise reduction
-- `combineGLB.py`: Converts label arrays to meshes using marching cubes, includes LABELS mapping for anatomical structures
-- `processMesh.py`: Mesh smoothing operations (Taubin/Laplacian) and Poisson reconstruction
-- `config/`: JSON configuration files for two-stage smoothing parameters
+# 메시 컬렉션
+MeshCollection()  # dict-like, .add(), .get(), .to_scene()
 
-**Configuration System:**
-
-- `parts_config1.json`: First-stage smoothing parameters per anatomical structure
-- `parts_config2.json`: Second-stage smoothing parameters
-- Each structure has configurable smoothing functions (taubin/laplacian) and dilation operations
+# 파이프라인 설정
+PipelineSettings(input_path, output_dir, debug)
+```
 
 ### Anatomical Structure Labels
 
-The pipeline recognizes these anatomical structures with specific IDs:
+```python
+class Label(IntEnum):
+    TUMOR = 1
+    KIDNEY = 2
+    ARTERY = 3
+    VEIN = 4
+    URETER = 5
+    FAT = 6
+    RENAL_A = 7  # 동맥 분기
+    RENAL_V = 8  # 정맥 분기
+```
 
-- Tumor (1), Kidney (1,2), Artery (3), Vein (4), Ureter (5), Fat (6), Renal_a (7), Renal_v (8)
+## Configuration
 
-## Key Implementation Details
+스무딩 설정은 `config/presets/` 폴더의 JSON 파일로 관리됩니다:
 
-### Main Processing Function
+- `stage1.json`: 1단계 스무딩 (주요 형태 정의)
+- `stage2.json`: 2단계 스무딩 (마무리)
 
-- `main(case_path)` in main.py orchestrates the entire pipeline
-- Uses regex parsing to extract case IDs and phases from file paths
-- Applies two-stage smoothing with JSON-configured parameters
+각 구조별로 설정 가능한 항목:
+- `smoothing_func`: "taubin" | "laplacian" | null
+- `dilation_func`: "default" | null
+- `simplification_func`: "decimate" | "decimate_pro" | null
 
-### Mesh Processing Pipeline
-
-- First smoothing stage applies organ-specific parameters from parts_config1.json
-- Poisson reconstruction improves mesh topology between smoothing stages
-- Second smoothing stage uses parts_config2.json for final quality enhancement
-- Pipeline supports debug mode for intermediate file inspection
-
-### Data Structure
+## Data Structure
 
 ```
 data/
 ├── case_XXXX/
-│   ├── mask/segment_A.nii.gz    # Input segmentation
-│   └── 3d/obj_A.glb            # Output 3D model
-└── inference/                   # Additional datasets
+│   ├── mask/segment_A.nii.gz    # 입력 세그멘테이션
+│   └── 3d/obj_A.glb             # 출력 3D 모델
+└── inference/                    # 추가 데이터셋
 ```
 
 ## Development Notes
 
-- The pipeline processes one case at a time; modify `case_path` in main.py for different cases
-- Smoothing parameters are highly specialized for medical imaging and should be adjusted carefully
-- The system expects specific file naming conventions (case_XXXX, segment_A pattern)
-- Processing time is approximately 40 seconds per subject on modern hardware
-- All intermediate processing uses spacing information preserved from original NIfTI files
+- 프로젝트 루트(ARNA-3D/)에서 직접 실행
+- 절대 임포트 사용 (예: `from config.constants import Label`)
+- `file_io/` 폴더 사용 (Python 내장 `io` 모듈과 충돌 방지)
+- 타입 힌팅 사용 (Python 3.10+ 문법)
+- 단일 책임 원칙 준수 (함수당 하나의 역할)
+- 임시 파일은 `TempFileManager` context manager로 관리
+
+## Legacy Code (참조용)
+
+기존 코드는 `.legacy/` 폴더에 보관:
+- `main.py` → `runner.py`
+- `threeDRecon/processNii.py` → `threeDrecon/vessel/`, `threeDrecon/segmentation/`
+- `threeDRecon/combineGLB2.py` → `threeDrecon/mesh/extraction.py`
+- `threeDRecon/processMesh.py` → `threeDrecon/mesh/smoothing.py`, `reconstruction.py`

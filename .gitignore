@@ -1,4 +1,6 @@
+/.claude
 /data
 /test
 /.vscode
+/.git
 **/__pycache__/

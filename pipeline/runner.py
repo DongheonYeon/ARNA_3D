@@ -1,9 +1,3 @@
-"""
-파이프라인 실행 모듈
-
-전체 처리 파이프라인을 오케스트레이션합니다.
-"""
-
 import time
 from pathlib import Path
 from dataclasses import dataclass, field
@@ -14,7 +8,10 @@ from core.types import VolumeData, MeshCollection
 from file_io.nifti import load_nifti
 from file_io.mesh import save_scene, save_debug_scene
 from file_io.temp import TempFileManager
-from processing.segmentation import preprocess_segmentation, merge_tumor_to_kidney
+from processing.segmentation.preprocessing import (
+    preprocess_segmentation,
+    merge_tumor_to_kidney,
+)
 from processing.mesh.extraction import extract_meshes_from_volume
 from processing.mesh.smoothing import smooth_mesh_collection
 from processing.mesh.reconstruction import process_vessel_reconstruction

@@ -1,6 +1,6 @@
 import argparse
 from pathlib import Path
-from pipeline import run_pipeline
+from pipeline.runner import run_pipeline
 from config.logger import logger
 
 def main():

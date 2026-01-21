@@ -8,11 +8,11 @@ from pathlib import Path
 import numpy as np
 import SimpleITK as sitk
 
+from config.logger import logger
 from core.types import VolumeData
-from core.exceptions import VolumeLoadError
 
 
-def load_nifti(file_path: Path | str) -> VolumeData:
+def load_nifti(file_path: Path | str) -> VolumeData | None:
     """
     NIfTI 파일을 VolumeData로 로드
 
@@ -20,15 +20,13 @@ def load_nifti(file_path: Path | str) -> VolumeData:
         file_path: NIfTI 파일 경로 (.nii 또는 .nii.gz)
 
     Returns:
-        VolumeData 객체
-
-    Raises:
-        VolumeLoadError: 파일 로드 실패 시
+        VolumeData 객체 (실패 시 None)
     """
     file_path = Path(file_path)
 
     if not file_path.exists():
-        raise VolumeLoadError(f"파일을 찾을 수 없습니다: {file_path}")
+        logger.error(f"VolumeLoadError: file not found: {file_path}")
+        return None
 
     try:
         img = sitk.ReadImage(str(file_path))
@@ -41,7 +39,8 @@ def load_nifti(file_path: Path | str) -> VolumeData:
             direction=img.GetDirection(),
         )
     except Exception as e:
-        raise VolumeLoadError(f"NIfTI 로드 실패: {file_path} - {e}") from e
+        logger.error(f"VolumeLoadError: failed to load NIfTI: {file_path}", exception=e)
+        return None
 
 
 def save_nifti(volume: VolumeData, file_path: Path | str) -> Path:

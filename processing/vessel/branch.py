@@ -8,7 +8,6 @@ import numpy as np
 
 from config.constants import Label, VesselParams
 from config.logger import logger
-from core.exceptions import VesselProcessingError
 from processing.vessel.analysis import get_largest_component, detect_gradient_range
 from processing.vessel.interpolation import interpolate_circle_bridge, interpolate_ellipse_bridge
 
@@ -146,5 +145,5 @@ def process_vessel_branches(
         return renal_a, renal_v
 
     except Exception as e:
-        logger.error(f"Vessel processing failed: {e} - return zero array", exception=e)
+        logger.error("VesselProcessingError: failed to process vessel branches - return zero array", exception=e)
         return renal_a, renal_v

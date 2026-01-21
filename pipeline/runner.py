@@ -30,12 +30,12 @@ class Pipeline:
     _volume: VolumeData | None = field(default=None, init=False)
     _meshes: MeshCollection | None = field(default=None, init=False)
 
-    def run(self) -> Path:
+    def run(self) -> Path | None:
         """
         파이프라인 실행
 
         Returns:
-            저장된 GLB 파일 경로
+            저장된 GLB 파일 경로 (실패 시 None)
         """
         start_time = time.time()
 
@@ -44,6 +44,9 @@ class Pipeline:
 
         # 1. NIfTI 로드
         self._volume = load_nifti(self.settings.input_path)
+        if self._volume is None:
+            logger.error("VolumeLoadError: pipeline aborted due to NIfTI load failure")
+            return None
 
         # 2. 세그멘테이션 전처리
         logger.debug("Preprocessing segmentation file...")
@@ -119,7 +122,7 @@ def run_pipeline(
     input_path: Path | str,
     output_dir: Path | str | None = None,
     debug: bool = False,
-) -> Path:
+) -> Path | None:
     """
     파이프라인 실행 편의 함수
 
@@ -129,7 +132,7 @@ def run_pipeline(
         debug: 디버그 모드
 
     Returns:
-        저장된 GLB 파일 경로
+        저장된 GLB 파일 경로 (실패 시 None)
     """
     settings = PipelineSettings(
         input_path=Path(input_path),

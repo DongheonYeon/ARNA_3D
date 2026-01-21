@@ -9,10 +9,9 @@ import trimesh
 
 from config.logger import logger
 from core.types import MeshCollection
-from core.exceptions import MeshExtractionError
 
 
-def load_mesh(file_path: Path | str) -> trimesh.Trimesh:
+def load_mesh(file_path: Path | str) -> trimesh.Trimesh | None:
     """
     메시 파일 로드
 
@@ -20,20 +19,19 @@ def load_mesh(file_path: Path | str) -> trimesh.Trimesh:
         file_path: 메시 파일 경로 (.glb, .obj 등)
 
     Returns:
-        trimesh.Trimesh 객체
-
-    Raises:
-        MeshExtractionError: 로드 실패 시
+        trimesh.Trimesh 객체 (실패 시 None)
     """
     file_path = Path(file_path)
 
     if not file_path.exists():
-        raise MeshExtractionError(f"File not found: {file_path}")
+        logger.error(f"MeshExtractionError: file not found: {file_path}")
+        return None
 
     try:
         return trimesh.load(str(file_path))
     except Exception as e:
-        raise MeshExtractionError(f"Fail to load mesh: {file_path} - {e}") from e
+        logger.error(f"MeshExtractionError: failed to load mesh: {file_path}", exception=e)
+        return None
 
 
 def save_mesh(mesh: trimesh.Trimesh, file_path: Path | str) -> Path:

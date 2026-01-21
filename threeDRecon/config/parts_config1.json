@@ -3,9 +3,9 @@
     "name": "Tumor",
     "smoothing_func": "taubin",
     "smoothing_kwargs": {
-      "n_iter": 100,
+      "n_iter": 80,
       "pass_band": 0.001,
-      "feature_angle": 200.0,
+      "feature_angle": 180.0,
       "boundary_smoothing": true,
       "feature_smoothing": true,
       "non_manifold_smoothing": true
@@ -21,9 +21,9 @@
     "name": "Kidney",
     "smoothing_func": "taubin",
     "smoothing_kwargs": {
-      "n_iter": 100,
+      "n_iter": 80,
       "pass_band": 0.001,
-      "feature_angle": 200.0,
+      "feature_angle": 180.0,
       "boundary_smoothing": true,
       "feature_smoothing": true,
       "non_manifold_smoothing": true

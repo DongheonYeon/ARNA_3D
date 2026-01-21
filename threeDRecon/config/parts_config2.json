@@ -3,10 +3,7 @@
     "name": "Tumor",
     "smoothing_func": null,
     "smoothing_kwargs": null,
-    "dilation_func": "default",
-    "dilation_kwargs": {
-      "offset": 0.5
-    },
+    "dilation_func": null,
     "simplification_func": null,
     "simplification_kwargs": null
   },

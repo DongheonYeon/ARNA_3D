@@ -134,5 +134,8 @@ if __name__ == "__main__":
     출력은 결과가 저장된 경로를 반환합니다.
     output = "path/case_0000/3d/obj_A.nii.gz"
     '''
-    case_path = r".\data\case_N006\mask\segment_A.nii.gz"
-    result = main(case_path)
+    
+    # result = main(r".\data\case_S004\mask\segment_A.nii.gz")
+    # result = main(r".\data\case_S016\mask\segment_A.nii.gz")
+    # result = main(r".\data\test_001\mask\segment_A.nii.gz")
+    result = main(r".\data\test_006\mask\segment_A.nii.gz")

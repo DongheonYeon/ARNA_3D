@@ -6,13 +6,17 @@ NIfTI 볼륨에서 Marching Cubes로 메시를 추출합니다.
 
 from pathlib import Path
 import vtk
-from vtk.util.numpy_support import vtk_to_numpy
+from vtk.util.numpy_support import ( # type: ignore
+    vtk_to_numpy,
+    numpy_to_vtk,
+    get_vtk_array_type,
+)
 import trimesh
 import numpy as np
 
-from config.constants import LABELS
+from config.constants import Label
 from config.logger import logger
-from domain.types import MeshCollection
+from domain.types import MeshCollection, VolumeData
 from threeDrecon.mesh.splitting import split_bilateral, filter_valid_tumors
 from threeDrecon.mesh.transform import rotate_and_center_scene
 
@@ -25,13 +29,31 @@ def _read_nifti_vtk(file_path: Path | str) -> vtk.vtkNIFTIImageReader:
     return reader
 
 
-def _create_marching_cubes_extractor(
-    reader: vtk.vtkNIFTIImageReader,
-) -> vtk.vtkDiscreteMarchingCubes:
-    """Marching Cubes 추출기 생성"""
-    extractor = vtk.vtkDiscreteMarchingCubes()
-    extractor.SetInputConnection(reader.GetOutputPort())
-    return extractor
+def _volume_to_vtk_image(volume: VolumeData) -> vtk.vtkImageData:
+    """VolumeData를 VTK ImageData로 변환"""
+    data = np.ascontiguousarray(volume.array)
+    z_size, y_size, x_size = data.shape
+
+    vtk_data = numpy_to_vtk(
+        data.ravel(order="C"),
+        deep=True,
+        array_type=get_vtk_array_type(data.dtype),
+    )
+
+    image = vtk.vtkImageData()
+    image.SetDimensions(x_size, y_size, z_size)
+    image.SetSpacing(*volume.spacing)
+    image.SetOrigin(*volume.origin)
+    image.GetPointData().SetScalars(vtk_data)
+
+    if hasattr(image, "SetDirectionMatrix") and len(volume.direction) == 9:
+        direction = vtk.vtkMatrix3x3()
+        for r in range(3):
+            for c in range(3):
+                direction.SetElement(r, c, volume.direction[r * 3 + c])
+        image.SetDirectionMatrix(direction)
+
+    return image
 
 
 def _vtk_polydata_to_trimesh(polydata: vtk.vtkPolyData) -> trimesh.Trimesh | None:
@@ -54,7 +76,7 @@ def _vtk_polydata_to_trimesh(polydata: vtk.vtkPolyData) -> trimesh.Trimesh | Non
         if len(ids) == 3:
             faces.append(ids)
         elif len(ids) > 3:
-            # 다각형 → 삼각 팬으로 분할
+            # 다각형 -> 삼각 팬으로 분할
             for i in range(1, len(ids) - 1):
                 faces.append([ids[0], ids[i], ids[i + 1]])
 
@@ -66,11 +88,15 @@ def _vtk_polydata_to_trimesh(polydata: vtk.vtkPolyData) -> trimesh.Trimesh | Non
 
 
 def _extract_single_label(
-    reader: vtk.vtkNIFTIImageReader,
+    source: vtk.vtkAlgorithm | vtk.vtkImageData,
     label_value: int,
 ) -> trimesh.Trimesh | None:
     """단일 라벨의 메시 추출"""
-    extractor = _create_marching_cubes_extractor(reader)
+    extractor = vtk.vtkDiscreteMarchingCubes()
+    if isinstance(source, vtk.vtkAlgorithm):
+        extractor.SetInputConnection(source.GetOutputPort())
+    else:
+        extractor.SetInputData(source)
     extractor.SetValue(0, label_value)
     extractor.Update()
 
@@ -82,40 +108,36 @@ def _extract_single_label(
 
 
 def extract_meshes_from_volume(
-    nifti_path: Path | str,
-    kidney_nifti_path: Path | str | None = None,
+    nifti_data: VolumeData,
+    kidney_nifti_data: VolumeData,
 ) -> MeshCollection:
     """
     NIfTI 볼륨에서 모든 라벨의 메시 추출
 
     Args:
-        nifti_path: 메인 NIfTI 파일 경로
-        kidney_nifti_path: 신장용 NIfTI 파일 경로 (Tumor가 Kidney로 병합된 버전)
+        nifti_data: 메인 NIfTI 데이터
+        kidney_nifti_data: 신장 전처리된 NIfTI 데이터
 
     Returns:
         MeshCollection 객체
     """
-    nifti_path = Path(nifti_path)
-    reader = _read_nifti_vtk(nifti_path)
-
-    # 신장용 리더 (별도 파일이 있는 경우)
-    reader_kidney = None
-    if kidney_nifti_path:
-        reader_kidney = _read_nifti_vtk(kidney_nifti_path)
-
+    source = _volume_to_vtk_image(nifti_data)
+    source_kidney = _volume_to_vtk_image(kidney_nifti_data)
     collection = MeshCollection()
 
-    for label_name, label_value in LABELS.items():
+    for label in Label:
+        label_name = label.name.capitalize()
+        label_value = int(label)
         # 메시 추출
-        base_mesh = _extract_single_label(reader, label_value)
+        base_mesh = _extract_single_label(source, label_value)
 
         if base_mesh is None or base_mesh.faces.size == 0:
-            logger.warning(f"Skipping {label_name}: label not found.")
+            logger.warning(f"Skip {label_name}: label not found.")
             continue
 
         # 신장: L/R 분할
-        if label_name == "Kidney" and reader_kidney:
-            kidney_mesh = _extract_single_label(reader_kidney, label_value)
+        if label_name == "Kidney" and source_kidney:
+            kidney_mesh = _extract_single_label(source_kidney, label_value)
             if kidney_mesh:
                 _add_bilateral_meshes(collection, "Kidney", kidney_mesh)
             continue

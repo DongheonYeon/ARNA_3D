@@ -31,7 +31,7 @@ def split_bilateral(
     # 크기순으로 상위 max_parts개 선택
     parts = sorted(parts, key=lambda m: len(m.faces), reverse=True)[:max_parts]
 
-    # Z축 (centroid[2]) 기준 정렬 (L → R 순서)
+    # Z축 (centroid[2]) 기준 정렬 (L -> R 순서)
     parts = sorted(parts, key=lambda m: m.centroid[2])
 
     return parts

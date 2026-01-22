@@ -10,12 +10,14 @@
 ### 원본 코드의 문제점
 
 **단일 책임 원칙(SRP) 위반:**
+
 - `processNii.py`의 `process_vessels()`: 동맥 처리 + 정맥 처리 + 예외 처리를 한 함수에서 담당
 - `combineGLB2.py`의 `make_glb()`: 메시 추출 + 분할(L/R) + 검증(Tumor) + 회전 변환 혼합
 - `processMesh.py`의 `_process_single_mesh()`: 11개 인자, Dilation + Smoothing + Simplification 혼합
 - `main.py`의 `main()`: 전처리 + 임시파일 관리 + GLB 생성 + 스무딩(2단계) + 저장
 
 **기타 문제:**
+
 - 매직 넘버 남발 (percentile=95, depth=8, 40000 등 하드코딩)
 - 중복 코드 (Kidney/Fat L/R 분할 로직, combineGLB.py vs combineGLB2.py)
 - 임시 파일 관리 취약 (부모 디렉토리에 temp.nii.gz 생성)
@@ -64,7 +66,7 @@ arna_3d/
 │   ├── __init__.py
 │   ├── segmentation/        # 세그멘테이션 전처리
 │   │   ├── __init__.py
-│   │   ├── preprocessing.py # preprocess_segmentation(), apply_fat_dilation(), merge_tumor_to_kidney()
+│   │   ├── preprocessing.py # preprocess_segmentation(), apply_fat_dilation(), preprocess_kidney_segmentation()
 │   │   └── morphology.py    # get_largest_component()
 │   │
 │   ├── vessel/              # 혈관 분석 (기존 processNii.py에서 분리)
@@ -100,7 +102,7 @@ class VolumeData:
 
 @dataclass
 class MeshCollection:
-    """메시 컬렉션 - trimesh.Scene 래퍼"""
+    """trimesh.Scene 래퍼"""
     _meshes: dict[str, trimesh.Trimesh]
 
     def add(name, mesh): ...
@@ -154,7 +156,7 @@ class Pipeline:
         processed = preprocess_segmentation(volume)
 
         # 3. 신장용 볼륨 생성 (Tumor → Kidney 병합)
-        kidney_volume = merge_tumor_to_kidney(processed)
+        kidney_volume = preprocess_kidney_segmentation(processed)
 
         # 4. 임시 파일로 저장 후 메시 추출
         with TempFileManager() as temp_mgr:
@@ -188,6 +190,7 @@ python -m arna_3d ./data/case_S004/mask/segment_A.nii.gz --debug
 ```
 
 **예상되는 문제:**
+
 - import 경로 오류 가능성
 - 함수 시그니처 불일치 가능성
 - 기존 로직과의 미세한 차이
@@ -195,6 +198,7 @@ python -m arna_3d ./data/case_S004/mask/segment_A.nii.gz --debug
 ### 3.2 기존 코드 제거 (우선순위: 중간)
 
 테스트 완료 후 제거할 파일:
+
 - `main.py`
 - `threeDRecon/processNii.py`
 - `threeDRecon/combineGLB.py` (이미 미사용)
@@ -213,23 +217,23 @@ python -m arna_3d ./data/case_S004/mask/segment_A.nii.gz --debug
 
 ## 4. 기존 코드 ↔ 새 코드 매핑
 
-| 기존 파일 | 기존 함수 | 새 위치 | 새 함수 |
-|----------|----------|---------|---------|
-| `processNii.py` | `get_largest_component()` | `threeDrecon/vessel/analysis.py` | `get_largest_component()` |
-| `processNii.py` | `get_radii_array()` | `threeDrecon/vessel/analysis.py` | `compute_radii_array()` |
-| `processNii.py` | `get_gradient_range()` | `threeDrecon/vessel/analysis.py` | `detect_gradient_range()` |
-| `processNii.py` | `get_zscore_range()` | `threeDrecon/vessel/analysis.py` | `detect_zscore_range()` |
-| `processNii.py` | `interpolate_circle_bridge()` | `threeDrecon/vessel/interpolation.py` | `interpolate_circle_bridge()` |
-| `processNii.py` | `interpolate_vein()` | `threeDrecon/vessel/interpolation.py` | `interpolate_ellipse_bridge()` |
-| `processNii.py` | `process_vessels()` | `threeDrecon/vessel/branch.py` | `process_vessel_branches()` |
-| `processNii.py` | `preprocess()` | `threeDrecon/segmentation/preprocessing.py` | `preprocess_segmentation()` |
-| `combineGLB2.py` | `make_glb()` | `threeDrecon/mesh/extraction.py` | `extract_meshes_from_volume()` |
-| `combineGLB2.py` | `rotate_and_center()` | `threeDrecon/mesh/transform.py` | `rotate_and_center_scene()` |
-| `processMesh.py` | `mesh_smoothing()` | `threeDrecon/mesh/smoothing.py` | `smooth_mesh_collection()` |
-| `processMesh.py` | `_process_single_mesh()` | `threeDrecon/mesh/smoothing.py` | `process_single_mesh()` |
-| `processMesh.py` | `poisson_reconstruction()` | `threeDrecon/mesh/reconstruction.py` | `poisson_reconstruct()` |
-| `processMesh.py` | `process_poisson()` | `threeDrecon/mesh/reconstruction.py` | `process_vessel_reconstruction()` |
-| `main.py` | `main()` | `runner.py` | `Pipeline.run()` |
+| 기존 파일        | 기존 함수                     | 새 위치                                     | 새 함수                           |
+| ---------------- | ----------------------------- | ------------------------------------------- | --------------------------------- |
+| `processNii.py`  | `get_largest_component()`     | `threeDrecon/vessel/analysis.py`            | `get_largest_component()`         |
+| `processNii.py`  | `get_radii_array()`           | `threeDrecon/vessel/analysis.py`            | `compute_radii_array()`           |
+| `processNii.py`  | `get_gradient_range()`        | `threeDrecon/vessel/analysis.py`            | `detect_gradient_range()`         |
+| `processNii.py`  | `get_zscore_range()`          | `threeDrecon/vessel/analysis.py`            | `detect_zscore_range()`           |
+| `processNii.py`  | `interpolate_circle_bridge()` | `threeDrecon/vessel/interpolation.py`       | `interpolate_circle_bridge()`     |
+| `processNii.py`  | `interpolate_vein()`          | `threeDrecon/vessel/interpolation.py`       | `interpolate_ellipse_bridge()`    |
+| `processNii.py`  | `process_vessels()`           | `threeDrecon/vessel/branch.py`              | `process_vessel_branches()`       |
+| `processNii.py`  | `preprocess()`                | `threeDrecon/segmentation/preprocessing.py` | `preprocess_segmentation()`       |
+| `combineGLB2.py` | `make_glb()`                  | `threeDrecon/mesh/extraction.py`            | `extract_meshes_from_volume()`    |
+| `combineGLB2.py` | `rotate_and_center()`         | `threeDrecon/mesh/transform.py`             | `rotate_and_center_scene()`       |
+| `processMesh.py` | `mesh_smoothing()`            | `threeDrecon/mesh/smoothing.py`             | `smooth_mesh_collection()`        |
+| `processMesh.py` | `_process_single_mesh()`      | `threeDrecon/mesh/smoothing.py`             | `process_single_mesh()`           |
+| `processMesh.py` | `poisson_reconstruction()`    | `threeDrecon/mesh/reconstruction.py`        | `poisson_reconstruct()`           |
+| `processMesh.py` | `process_poisson()`           | `threeDrecon/mesh/reconstruction.py`        | `process_vessel_reconstruction()` |
+| `main.py`        | `main()`                      | `runner.py`                                 | `Pipeline.run()`                  |
 
 ---
 
@@ -238,6 +242,7 @@ python -m arna_3d ./data/case_S004/mask/segment_A.nii.gz --debug
 ### 5.1 로직 변경 없음 원칙
 
 리팩토링 시 기존 로직을 그대로 유지했습니다. 다음 항목들은 의도적으로 변경하지 않음:
+
 - 혈관 분석 알고리즘 (그래디언트 기반 범위 탐지)
 - 스무딩 파라미터
 - 좌표계 변환 (NIfTI → GLB)
@@ -246,6 +251,7 @@ python -m arna_3d ./data/case_S004/mask/segment_A.nii.gz --debug
 ### 5.2 의존성
 
 기존 `requirements.txt`와 동일한 패키지 사용:
+
 - SimpleITK: NIfTI I/O
 - VTK: Marching Cubes
 - trimesh: 메시 조작
@@ -256,6 +262,7 @@ python -m arna_3d ./data/case_S004/mask/segment_A.nii.gz --debug
 ### 5.3 Python 버전
 
 타입 힌팅에 Python 3.10+ 문법 사용:
+
 ```python
 def func() -> tuple[int, int] | None:  # 3.10+
 ```
@@ -267,6 +274,7 @@ Python 3.9 이하에서는 `from __future__ import annotations` 추가 필요.
 ## 6. 다음 세션에서 할 일
 
 1. **테스트 실행**
+
    ```bash
    cd c:\Users\USER\Documents\Projects\ARNA-3D
    python -m arna_3d ./data/test_006/mask/segment_A.nii.gz --debug

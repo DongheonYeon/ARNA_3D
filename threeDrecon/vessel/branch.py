@@ -134,13 +134,13 @@ def process_vessel_branches(
         if artery_mask.any():
             renal_a = process_artery_branches(artery_mask, z_start, z_end)
         else:
-            logger.warning("Artery: label not found, skipping.")
+            logger.warning("Skip artery: label not found.")
 
         # 정맥 처리
         if vein_mask.any():
             renal_v = process_vein_branches(vein_mask, z_start, z_end)
         else:
-            logger.warning("Vein: label not found, skipping.")
+            logger.warning("Skip vein: label not found.")
 
         return renal_a, renal_v
 

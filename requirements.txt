@@ -7,4 +7,3 @@ scipy>=1.15.1
 scikit-image>=0.24.0
 opencv-python>=4.11.0.86
 vtk>=9.2.6
-pygltflib>=1.16.0

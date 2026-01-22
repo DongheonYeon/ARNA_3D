@@ -12,7 +12,7 @@ def rotate_and_center_scene(scene: trimesh.Scene) -> trimesh.Scene:
     """
     Scene을 회전하고 중심으로 이동
 
-    NIfTI 좌표계 → GLB 좌표계 변환을 수행합니다.
+    NIfTI 좌표계 -> GLB 좌표계 변환을 수행합니다.
 
     Args:
         scene: 변환할 Scene

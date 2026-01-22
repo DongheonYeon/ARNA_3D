@@ -69,7 +69,7 @@ class PipelineSettings:
     """파이프라인 전체 설정"""
     # 경로 설정
     input_path: Path
-    output_dir: Path | None = None
+    output_path: Path
 
     # 디버그 설정
     debug: bool = False
@@ -81,12 +81,7 @@ class PipelineSettings:
     def __post_init__(self):
         """경로 정규화 및 기본값 설정"""
         self.input_path = Path(self.input_path)
-
-        # output_dir 기본값: input_path의 상위/3d/
-        if self.output_dir is None:
-            self.output_dir = self.input_path.parent.parent / "3d"
-        else:
-            self.output_dir = Path(self.output_dir)
+        self.output_path = Path(self.output_path)
 
         # 프리셋 경로 기본값
         presets_dir = Path(__file__).parent / "presets"

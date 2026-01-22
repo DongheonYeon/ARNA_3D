@@ -75,7 +75,7 @@ class MeshCollection:
         return self._meshes.pop(name, None)
 
     def get_by_prefix(self, prefix: str) -> list[tuple[str, trimesh.Trimesh]]:
-        """접두사로 시작하는 모든 메시 반환 (예: 'Kidney' → 'Kidney-L', 'Kidney-R')"""
+        """접두사로 시작하는 모든 메시 반환 (예: 'Kidney' -> 'Kidney-L', 'Kidney-R')"""
         return [
             (name, mesh)
             for name, mesh in self._meshes.items()

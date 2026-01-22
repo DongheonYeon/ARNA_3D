@@ -65,8 +65,8 @@ def process_vessel_reconstruction(collection: MeshCollection) -> MeshCollection:
     """
     혈관 그룹을 Poisson 재구성으로 처리
 
-    Artery + Renal_a → Artery
-    Vein + Renal_v → Vein
+    Artery + Renal_a -> Artery
+    Vein + Renal_v -> Vein
 
     Args:
         collection: 입력 MeshCollection

@@ -4,12 +4,14 @@
 NIfTI 세그멘테이션 라벨을 전처리합니다.
 """
 
+from pathlib import Path
 import numpy as np
-from scipy.ndimage import binary_dilation
+from scipy.ndimage import binary_dilation, distance_transform_edt
 
 from config.constants import Label, MorphologyParams
+from config.logger import logger
 from domain.types import VolumeData
-from file_io.nifti import copy_metadata
+from file_io.nifti import copy_metadata, save_nifti
 from threeDrecon.vessel.branch import process_vessel_branches
 
 
@@ -108,18 +110,95 @@ def preprocess_segmentation(volume: VolumeData) -> VolumeData:
     return copy_metadata(volume, out_arr)
 
 
-def merge_tumor_to_kidney(volume: VolumeData) -> VolumeData:
+def preprocess_kidney_segmentation(
+    volume: VolumeData,
+    protect_distance: int = MorphologyParams.TUMOR_PROTECT_DISTANCE
+) -> VolumeData:
     """
-    Tumor 라벨을 Kidney 라벨로 병합
-
-    메시 생성 시 신장 분할에 사용됩니다.
+    Kidney 경계에서 protect_distance 이내의 Tumor 영역을 Kidney 라벨로 병합
 
     Args:
         volume: 입력 VolumeData
+        protect_distance: kidney로부터 보호할 거리(voxel)
 
     Returns:
         병합된 VolumeData
     """
     arr = volume.array.copy()
-    arr[(arr == Label.TUMOR) | (arr == Label.KIDNEY)] = Label.KIDNEY
+    tumor_mask = arr == Label.TUMOR
+    kidney_mask = arr == Label.KIDNEY
+
+    if protect_distance > 0:
+        distance_to_kidney = distance_transform_edt(~kidney_mask)
+        allow_erosion = distance_to_kidney > protect_distance
+    else:
+        allow_erosion = np.ones_like(kidney_mask, dtype=bool)
+
+    tumor_merge = tumor_mask & ~allow_erosion
+    
+    arr[tumor_mask] = 0
+    arr[kidney_mask | tumor_merge] = Label.KIDNEY
     return copy_metadata(volume, arr)
+"""
+def preprocess_kidney_segmentation_with_erosion(
+    volume: VolumeData,
+    erosion_iterations: int = MorphologyParams.TUMOR_EROSION_ITERATIONS,
+    protect_distance: int = MorphologyParams.TUMOR_PROTECT_DISTANCE,
+    debug: bool = False,
+    debug_dir: Path | str | None = None,
+    phase: str | None = None,
+) -> VolumeData:
+
+    # Tumor 라벨을 거리 기반 보호 후 erosion하여 Kidney 라벨로 병합
+
+    # Kidney 경계에서 protect_distance 이내의 Tumor 영역은 erosion에서 보호합니다.
+
+    # Args:
+    #     volume: 입력 VolumeData
+    #     erosion_iterations: tumor erosion 반복 횟수
+    #     protect_distance: kidney로부터 보호할 거리(voxel)
+    #     debug: True면 디버그용 NIfTI 저장
+    #     debug_dir: 디버그 저장 디렉토리
+    #     phase: 디버그 파일명에 사용할 phase
+
+    # Returns:
+    #     병합된 VolumeData
+
+    arr = volume.array.copy()
+    tumor_mask = arr == Label.TUMOR
+    kidney_mask = arr == Label.KIDNEY
+
+    if protect_distance > 0:
+        distance_to_kidney = distance_transform_edt(~kidney_mask)
+        allow_erosion = distance_to_kidney > protect_distance
+    else:
+        allow_erosion = np.ones_like(kidney_mask, dtype=bool)
+
+    structure = np.ones((3, 3, 3), dtype=bool)
+    eroded_tumor = binary_erosion(
+        tumor_mask,
+        structure=structure,
+        iterations=erosion_iterations,
+    )
+
+    # 보호 영역은 그대로 유지
+    protected_tumor = tumor_mask & ~allow_erosion
+    tumor_final = (eroded_tumor & allow_erosion) | protected_tumor
+
+    if debug and debug_dir is not None:
+        debug_arr = np.zeros_like(volume.array)
+        debug_arr[kidney_mask | tumor_final] = Label.KIDNEY
+        debug_volume = copy_metadata(volume, debug_arr)
+        phase_tag = phase or "X"
+        debug_path = Path(debug_dir) / f"seg_{phase_tag}_kidney_erosion.nii.gz"
+        try:
+            save_nifti(debug_volume, debug_path)
+            logger.debug(f"Saved: {debug_path}")
+        except Exception as e:
+            logger.warning(f"Failed to save kidney erosion debug NIfTI: {e}")
+
+    # tumor 라벨 제거 후 kidney와 병합
+    arr[tumor_mask] = 0
+    arr[kidney_mask | tumor_final] = Label.KIDNEY
+    return copy_metadata(volume, arr)
+"""

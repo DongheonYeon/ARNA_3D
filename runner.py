@@ -10,7 +10,7 @@ from file_io.nifti import load_nifti
 from file_io.mesh import save_scene, save_debug_scene
 from threeDrecon.segmentation.preprocessing import (
     preprocess_segmentation,
-    merge_tumor_to_kidney,
+    preprocess_kidney_segmentation,
 )
 from threeDrecon.mesh.extraction import extract_meshes_from_volume
 from threeDrecon.mesh.smoothing import smooth_mesh_collection
@@ -51,7 +51,7 @@ class Pipeline:
         # 2. 세그멘테이션 전처리
         logger.debug("Preprocessing segmentation file...")
         processed_volume = preprocess_segmentation(self._volume)
-        kidney_volume = merge_tumor_to_kidney(processed_volume)
+        kidney_volume = preprocess_kidney_segmentation(processed_volume)
 
         # 4. 메시 추출 (in-memory)
         logger.debug("Extracting Mesh from volume...")

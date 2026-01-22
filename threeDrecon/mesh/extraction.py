@@ -6,7 +6,7 @@ NIfTI 볼륨에서 Marching Cubes로 메시를 추출합니다.
 
 from pathlib import Path
 import vtk
-from vtk.util.numpy_support import (
+from vtk.util.numpy_support import ( # type: ignore
     vtk_to_numpy,
     numpy_to_vtk,
     get_vtk_array_type,
@@ -14,7 +14,7 @@ from vtk.util.numpy_support import (
 import trimesh
 import numpy as np
 
-from config.constants import LABELS
+from config.constants import Label
 from config.logger import logger
 from domain.types import MeshCollection, VolumeData
 from threeDrecon.mesh.splitting import split_bilateral, filter_valid_tumors
@@ -76,7 +76,7 @@ def _vtk_polydata_to_trimesh(polydata: vtk.vtkPolyData) -> trimesh.Trimesh | Non
         if len(ids) == 3:
             faces.append(ids)
         elif len(ids) > 3:
-            # 다각형 → 삼각 팬으로 분할
+            # 다각형 -> 삼각 팬으로 분할
             for i in range(1, len(ids) - 1):
                 faces.append([ids[0], ids[i], ids[i + 1]])
 
@@ -125,7 +125,9 @@ def extract_meshes_from_volume(
     source_kidney = _volume_to_vtk_image(kidney_nifti_data)
     collection = MeshCollection()
 
-    for label_name, label_value in LABELS.items():
+    for label in Label:
+        label_name = label.name.capitalize()
+        label_value = int(label)
         # 메시 추출
         base_mesh = _extract_single_label(source, label_value)
 

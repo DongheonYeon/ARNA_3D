@@ -14,7 +14,7 @@
     "dilation_kwargs": null,
     "simplification_func": "decimate",
     "simplification_kwargs": {
-      "target_reduction": 0.9
+      "target_reduction": 0.8
     }
   },
   {

@@ -8,8 +8,8 @@ import numpy as np
 import cv2
 from scipy.ndimage import binary_dilation
 
-from config.constants import VesselParams
-from threeDrecon.vessel.analysis import get_largest_component, get_max_inscribed_circle
+from ...config.constants import VesselParams
+from .analysis import get_largest_component, get_max_inscribed_circle
 
 
 def get_fitted_ellipse(mask_2d: np.ndarray) -> tuple | None:

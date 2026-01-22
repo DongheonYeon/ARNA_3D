@@ -7,10 +7,10 @@ Taubin/Laplacian 스무딩, Dilation, Decimation을 수행합니다.
 import pyvista as pv
 import trimesh
 
-from config.settings import SmoothingConfig
-from config.logger import logger
-from domain.types import MeshCollection
-from threeDrecon.mesh.conversion import trimesh_to_pyvista, pyvista_to_trimesh
+from ...config.settings import SmoothingConfig
+from ...config.logger import logger
+from ...domain.types import MeshCollection
+from .conversion import trimesh_to_pyvista, pyvista_to_trimesh
 
 
 # 스무딩 함수 맵

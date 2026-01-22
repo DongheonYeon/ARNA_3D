@@ -14,11 +14,11 @@ from vtk.util.numpy_support import ( # type: ignore
 import trimesh
 import numpy as np
 
-from config.constants import Label
-from config.logger import logger
-from domain.types import MeshCollection, VolumeData
-from threeDrecon.mesh.splitting import split_bilateral, filter_valid_tumors
-from threeDrecon.mesh.transform import rotate_and_center_scene
+from ...config.constants import Label
+from ...config.logger import logger
+from ...domain.types import MeshCollection, VolumeData
+from .splitting import split_bilateral, filter_valid_tumors
+from .transform import rotate_and_center_scene
 
 
 def _read_nifti_vtk(file_path: Path | str) -> vtk.vtkNIFTIImageReader:

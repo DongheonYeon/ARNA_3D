@@ -2,18 +2,18 @@ import time
 from pathlib import Path
 from dataclasses import dataclass, field
 
-from config.settings import PipelineSettings, SmoothingPreset
-from config.logger import logger
-from domain.types import VolumeData, MeshCollection
-from file_io.nifti import load_nifti
-from file_io.mesh import save_scene, save_debug_scene
-from threeDrecon.segmentation.preprocessing import (
+from .config.settings import PipelineSettings, SmoothingPreset
+from .config.logger import logger
+from .domain.types import VolumeData, MeshCollection
+from .file_io.nifti import load_nifti
+from .file_io.mesh import save_scene, save_debug_scene
+from .threeDrecon.segmentation.preprocessing import (
     preprocess_segmentation,
     preprocess_kidney_segmentation,
 )
-from threeDrecon.mesh.extraction import extract_meshes_from_volume
-from threeDrecon.mesh.smoothing import smooth_mesh_collection
-from threeDrecon.mesh.reconstruction import process_vessel_reconstruction
+from .threeDrecon.mesh.extraction import extract_meshes_from_volume
+from .threeDrecon.mesh.smoothing import smooth_mesh_collection
+from .threeDrecon.mesh.reconstruction import process_vessel_reconstruction
 
 
 @dataclass

@@ -6,8 +6,8 @@
 
 import trimesh
 
-from config.constants import MorphologyParams
-from config.logger import logger
+from ...config.constants import MorphologyParams
+from ...config.logger import logger
 
 
 def split_bilateral(

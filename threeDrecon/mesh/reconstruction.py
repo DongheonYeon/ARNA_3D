@@ -8,10 +8,10 @@ import numpy as np
 import trimesh
 import open3d as o3d
 
-from config.constants import PoissonParams
-from config.logger import logger
-from domain.types import MeshCollection
-from threeDrecon.mesh.conversion import trimesh_to_open3d, open3d_to_trimesh
+from ...config.constants import PoissonParams
+from ...config.logger import logger
+from ...domain.types import MeshCollection
+from .conversion import trimesh_to_open3d, open3d_to_trimesh
 
 
 def poisson_reconstruct(

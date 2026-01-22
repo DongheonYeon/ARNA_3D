@@ -6,10 +6,10 @@
 
 import numpy as np
 
-from config.constants import Label, VesselParams
-from config.logger import logger
-from threeDrecon.vessel.analysis import get_largest_component, detect_gradient_range
-from threeDrecon.vessel.interpolation import interpolate_circle_bridge, interpolate_ellipse_bridge
+from ...config.constants import Label, VesselParams
+from ...config.logger import logger
+from .analysis import get_largest_component, detect_gradient_range
+from .interpolation import interpolate_circle_bridge, interpolate_ellipse_bridge
 
 
 def extract_branches(

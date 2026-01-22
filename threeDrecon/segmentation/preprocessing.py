@@ -8,11 +8,11 @@ from pathlib import Path
 import numpy as np
 from scipy.ndimage import binary_dilation, distance_transform_edt
 
-from config.constants import Label, MorphologyParams
-from config.logger import logger
-from domain.types import VolumeData
-from file_io.nifti import copy_metadata, save_nifti
-from threeDrecon.vessel.branch import process_vessel_branches
+from ...config.constants import Label, MorphologyParams
+from ...config.logger import logger
+from ...domain.types import VolumeData
+from ...file_io.nifti import copy_metadata, save_nifti
+from ..vessel.branch import process_vessel_branches
 
 
 def apply_fat_dilation(

@@ -7,8 +7,8 @@ trimesh를 사용하여 GLB/OBJ 파일을 읽고 씁니다.
 from pathlib import Path
 import trimesh
 
-from config.logger import logger
-from domain.types import MeshCollection
+from ..config.logger import logger
+from ..domain.types import MeshCollection
 
 
 def load_mesh(file_path: Path | str) -> trimesh.Trimesh | None:

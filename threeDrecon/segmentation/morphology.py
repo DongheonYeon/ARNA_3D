@@ -8,7 +8,7 @@ import numpy as np
 import scipy.ndimage
 from skimage.measure import regionprops
 
-from config.constants import MorphologyParams
+from ...config.constants import MorphologyParams
 
 
 def get_largest_component(mask: np.ndarray, n: int = 1) -> np.ndarray:

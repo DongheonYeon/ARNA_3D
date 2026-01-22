@@ -8,8 +8,8 @@ from pathlib import Path
 import numpy as np
 import SimpleITK as sitk
 
-from config.logger import logger
-from domain.types import VolumeData
+from ..config.logger import logger
+from ..domain.types import VolumeData
 
 
 def load_nifti(file_path: Path | str) -> VolumeData | None:

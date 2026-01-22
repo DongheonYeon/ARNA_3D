@@ -11,7 +11,7 @@ from scipy.stats import zscore
 from skimage.measure import label, regionprops
 from skimage.morphology import convex_hull_image
 
-from config.constants import VesselParams
+from ...config.constants import VesselParams
 
 
 def get_largest_component(mask: np.ndarray, n: int = 1) -> np.ndarray:

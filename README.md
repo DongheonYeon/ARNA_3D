@@ -1,84 +1,66 @@
-# ARNA 3D Medical Image Processing Pipeline
+# ARNA-3D Medical Image Processing Pipeline
 
-A comprehensive Python pipeline for converting medical segmentation data (NIfTI format) to high-quality 3D models (GLB format) with advanced smoothing and reconstruction techniques.
+NIfTI 세그멘테이션 데이터를 3D GLB 모델로 변환하는 의료 영상 처리 파이프라인입니다.
 
-## Overview
+## Installation
 
-This project provides a complete workflow for processing medical imaging data, specifically designed for kidney and related organ segmentation. It converts NIfTI segmentation files into smooth, production-ready 3D models suitable for visualization, 3D printing, or surgical planning.
-
-## Features
-
-- **Medical Image Processing**: Robust preprocessing of NIfTI segmentation data
-- **Multi-organ Support**: Handles tumor, kidney, artery, vein, ureter, fat, and renal vessels
-- **Advanced Smoothing**: Two-stage smoothing pipeline with configurable parameters
-- **Poisson Reconstruction**: High-quality mesh reconstruction for improved geometry
-- **Batch Processing**: Efficient processing of multiple subjects
-- **Debug Mode**: Comprehensive intermediate file saving for pipeline inspection
-- **Configurable Pipeline**: JSON-based configuration for different processing stages
+```bash
+pip install -r requirements.txt
+```
 
 ## Architecture
 
-The pipeline consists of five main stages:
-
-1. **NIfTI Preprocessing** (`processNii.py`)
-
-   - Noise reduction and morphological operations
-   - Connected component analysis
-   - Image smoothing and enhancement
-
-2. **Initial GLB Generation** (`combineGLB.py`)
-
-   - Marching cubes mesh extraction
-   - Multi-label segmentation handling
-   - Mesh optimization and normal fixing
-
-3. **First-stage Smoothing** (`processMesh.py`)
-
-   - Taubin and Laplacian smoothing
-   - Configurable smoothing parameters per organ
-   - Mesh dilation and offset operations
-
-4. **Poisson Reconstruction**
-
-   - Surface reconstruction for improved topology
-   - Noise reduction and hole filling
-
-5. **Second-stage Smoothing**
-   - Final quality enhancement
-   - Production-ready mesh generation
-
-### Setup
-
-1. Prepare your data structure:
-
 ```
-dataset/
-├── nii/                    # Input NIfTI segmentation files
-│   ├── S000_segmentation.nii.gz
-│   ├── S001_segmentation.nii.gz
-│   └── ...
-└── output/                 # Generated output files
-    ├── caseS000/
-    ├── caseS001/
-    └── ...
+ARNA-3D/
+├── core.py              # 백엔드 통합용 래퍼
+├── pipeline.py          # 핵심 파이프라인 (Pipeline 클래스)
+├── config/              # 설정 및 상수
+│   ├── constants.py     # Label enum, 파라미터 상수
+│   ├── settings.py      # PipelineSettings, SmoothingPreset
+│   ├── logger.py        # SimpleLogger
+│   └── presets/         # 스무딩 프리셋 JSON
+├── domain/              # 핵심 데이터 타입
+│   └── types.py         # VolumeData, MeshCollection
+├── file_io/             # 파일 입출력
+│   ├── nifti.py         # NIfTI 읽기/쓰기
+│   └── mesh.py          # GLB/OBJ 읽기/쓰기
+└── threeDrecon/         # 처리 로직
+    ├── segmentation/    # 세그멘테이션 전처리
+    ├── vessel/          # 혈관 분석
+    └── mesh/            # 메시 처리
 ```
 
-## Usage
+### Processing Pipeline
 
-### Basic Usage
+1. **NIfTI 로드**: 세그멘테이션 파일 로드
+2. **전처리**: 혈관 분기 자동 분할, Fat dilation
+3. **메시 추출**: Marching Cubes로 라벨별 메시 생성
+4. **1단계 스무딩**: 구조별 Taubin/Laplacian 스무딩
+5. **Poisson 재구성**: 혈관 메시 병합 및 재구성
+6. **2단계 스무딩**: 마무리 스무딩
+7. **GLB 저장**: 최종 3D 모델 출력
 
-```python
-python main.py
-```
+## Label for Anatomical Structures
 
-### Configuration
+| Label   | Structure       | ID  |
+| ------- | --------------- | --- |
+| Tumor   | Kidney Tumor    | 1   |
+| Kidney  | Kidney          | 2   |
+| Artery  | Arterial system | 3   |
+| Vein    | Venous system   | 4   |
+| Ureter  | Ureter          | 5   |
+| Fat     | Surrounding fat | 6   |
+| Renal_a | Renal artery    | 7   |
+| Renal_v | Renal vein      | 8   |
 
-The pipeline uses JSON configuration files for different processing stages:
+## Configuration
 
-- `threeDRecon/config/parts_config1.json`: First-stage smoothing parameters
-- `threeDRecon/config/parts_config2.json`: Second-stage smoothing parameters
+스무딩 설정은 `config/presets/` 폴더의 JSON 파일로 관리됩니다:
 
-Example configuration:
+- `stage1.json`: 1단계 스무딩 (주요 형태 정의)
+- `stage2.json`: 2단계 스무딩 (마무리)
+
+### 설정 예시
 
 ```json
 {
@@ -97,75 +79,38 @@ Example configuration:
 }
 ```
 
-### Customization
+## Data Structure
 
-Modify the subject ID and paths in `main.py`:
-
-```python
-subject_id = "S000"  # Change to your subject ID
-base_folder = "path/to/your/project"
+```
+data/
+├── case_XXXX/
+│   ├── mask/segment_A.nii.gz    # 입력 세그멘테이션
+│   └── 3d/obj_A.glb             # 출력 3D 모델
 ```
 
-## Label for Anatomical Structures
+## Debug
 
-| Label   | Structure       | ID  |
-| ------- | --------------- | --- |
-| Tumor   | Kidney Tumor    | 1   |
-| Kidney  | Kidney          | 2   |
-| Artery  | Arterial system | 3   |
-| Vein    | Venous system   | 4   |
-| Ureter  | Ureter          | 5   |
-| Fat     | Surrounding fat | 6   |
-| Renal_a | Renal artery    | 7   |
-| Renal_v | Renal vein      | 8   |
-
-## Pipeline Configuration
-
-### Smoothing Functions
-
-- **Taubin**: Volume-preserving smoothing
-- **Laplacian**: Traditional Laplacian smoothing
-
-### Dilation Functions
-
-- **Default**: Normal-based mesh offset
-- **Custom**: User-defined dilation methods
-
-## Output Files
-
-For each processed subject, the pipeline generates:
-
-- `{subject_id}_preprocessed.nii.gz`: Preprocessed segmentation
-- `{subject_id}_combined.glb`: Initial mesh combination
-- `{subject_id}_1st_smoothed.glb`: First-stage smoothed mesh
-- `{subject_id}_poisson_recon.glb`: Poisson reconstructed mesh
-- `{subject_id}_2nd_smoothed.glb`: Final production mesh
-
-## Debug Mode
-
-Enable debug mode for comprehensive pipeline inspection:
+디버그 모드 활성화 시 중간 결과가 저장됩니다:
 
 ```python
-debug = True  # in main.py
+run_pipeline(input_path, output_path, debug=True)
 ```
 
-This saves intermediate results and process time at each stage.
+저장되는 파일:
+
+- `obj_{phase}_before_step1.glb`: 스무딩 전 메시
+- `obj_{phase}_after_step1.glb`: 1단계 스무딩 후 메시
 
 ## Performance
 
-Typical processing times (depending on hardware and data resolution):
+일반적인 처리 시간 (하드웨어 및 해상도에 따라 상이):
 
-- Preprocessing: seconds
-- Initial GLB generation: seconds
-- First smoothing: seconds
-- Poisson reconstruction: seconds
-- Second smoothing: seconds
+- 총 처리 시간: ~40초 (Ryzen 5 7600 / RTX 4070 Ti Super / 32GB RAM / 1mm 이미지)
 
-Total: ~40 seconds per subject (Ryzen 5 7600 / 4070 TI Super / 32GB RAM / 1mm Image)
+## Libraries
 
-## Libraries used
-
-- [SimpleITK](https://simpleitk.org/) for medical image processing
-- [Trimesh](https://trimsh.org/) for 3D mesh processing
-- [PyVista](https://pyvista.org/) for advanced mesh operations
-- [Open3D](http://www.open3d.org/) for geometric processing
+- [SimpleITK](https://simpleitk.org/)
+- [Trimesh](https://trimsh.org/)
+- [PyVista](https://pyvista.org/)
+- [Open3D](http://www.open3d.org/)
+- [VTK](https://vtk.org/)

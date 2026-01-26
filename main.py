@@ -24,7 +24,7 @@ def core_smooth(input_path: str, output_path: str) -> str | None:
 
 if __name__ == "__main__":
     
-    case_num = "case_S001"
+    case_num = "case_S007"
     input_path = fr"C:\Users\USER\Documents\Projects\ARNA-3D\data\{case_num}\mask\segment__combined.nii.gz"
     output_path = fr"C:\Users\USER\Documents\Projects\ARNA-3D\data\{case_num}\3d\obj_A.glb"
     result = core_smooth(input_path, output_path)

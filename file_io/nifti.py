@@ -9,6 +9,7 @@ import numpy as np
 import SimpleITK as sitk
 
 from ..config.logger import logger
+from ..config.constants import ResamplingParams
 from ..domain.types import VolumeData
 
 
@@ -115,3 +116,92 @@ def copy_metadata(source: VolumeData, target_array: np.ndarray) -> VolumeData:
         origin=source.origin,
         direction=source.direction,
     )
+
+
+def resample_volume(
+    volume: VolumeData,
+    target_spacing: tuple[float, float, float],
+) -> VolumeData:
+    """
+    VolumeData를 목표 spacing으로 리샘플링
+
+    세그멘테이션 마스크용으로 Nearest Neighbor 보간 사용
+
+    Args:
+        volume: 리샘플링할 VolumeData
+        target_spacing: 목표 spacing (X, Y, Z) 순서
+
+    Returns:
+        리샘플링된 VolumeData
+    """
+    # VolumeData -> SimpleITK Image 변환
+    original_img = volume_to_sitk(volume)
+
+    # 원본 정보
+    original_spacing = original_img.GetSpacing()
+    original_size = original_img.GetSize()
+
+    # 새 크기 계산 (물리적 크기 유지)
+    new_size = [
+        int(round(original_size[i] * original_spacing[i] / target_spacing[i]))
+        for i in range(3)
+    ]
+
+    # 리샘플링 수행 (Nearest Neighbor - 세그멘테이션 마스크용)
+    resampled_img = sitk.Resample(
+        original_img,
+        new_size,
+        sitk.Transform(),
+        sitk.sitkNearestNeighbor,
+        original_img.GetOrigin(),
+        target_spacing,
+        original_img.GetDirection(),
+        0,  # default pixel value
+        original_img.GetPixelID(),
+    )
+
+    return sitk_to_volume(resampled_img)
+
+
+def resample_if_needed(
+    volume: VolumeData,
+    threshold: float | None = None,
+    target_xy: float | None = None,
+) -> VolumeData:
+    """
+    X, Y 축 중 하나라도 threshold 이하면 target_xy로 리샘플링
+
+    Z축은 원본 유지
+
+    Args:
+        volume: 입력 VolumeData
+        threshold: 리샘플링 기준 spacing (기본값: ResamplingParams.THRESHOLD)
+        target_xy: 목표 X, Y spacing (기본값: ResamplingParams.TARGET_XY)
+
+    Returns:
+        리샘플링된 VolumeData (조건 미충족시 원본 반환)
+    """
+    # 기본값 설정
+    params = ResamplingParams()
+    threshold = threshold if threshold is not None else params.THRESHOLD
+    target_xy = target_xy if target_xy is not None else params.TARGET_XY
+
+    sx, sy, sz = volume.spacing
+
+    # X 또는 Y 축 중 하나라도 threshold 이하인지 확인
+    if sx > threshold and sy > threshold:
+        logger.debug(f"Resampling not required: spacing(X,Y,Z)=({sx:.4f}, {sy:.4f}, {sz:.4f})mm")
+        return volume
+
+    nz, ny, nx = volume.shape
+    logger.debug(f"Resampling required: spacing(X,Y,Z)=({sx:.4f}, {sy:.4f}, {sz:.4f})mm -> ({target_xy}, {target_xy}, {sz:.4f})mm")
+    logger.debug(f"Original shape(X,Y,Z)=({nx}, {ny}, {nz})")
+
+    # X, Y축만 target_xy로 변경, Z축은 유지
+    target_spacing = (target_xy, target_xy, sz)
+    resampled = resample_volume(volume, target_spacing)
+
+    nz_new, ny_new, nx_new = resampled.shape
+    logger.debug(f"Resampling complete: shape(X,Y,Z) ({nx}, {ny}, {nz}) -> ({nx_new}, {ny_new}, {nz_new})")
+
+    return resampled

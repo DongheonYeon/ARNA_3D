@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from .config.settings import PipelineSettings, SmoothingPreset
 from .config.logger import logger
 from .domain.types import VolumeData, MeshCollection
-from .file_io.nifti import load_nifti
+from .file_io.nifti import load_nifti, resample_if_needed
 from .file_io.mesh import save_scene, save_debug_scene
 from .threeDrecon.segmentation.preprocessing import (
     preprocess_segmentation,
@@ -47,35 +47,39 @@ class Pipeline:
             logger.error("VolumeLoadError: pipeline aborted due to NIfTI load failure")
             return None
 
-        # 2. 세그멘테이션 전처리
+        # 2. 고해상도 이미지 리샘플링 (X, Y 중 하나라도 0.25mm 이하면 0.75mm로)
+        logger.debug("Checking resolution...")
+        self._volume = resample_if_needed(self._volume)
+
+        # 3. 세그멘테이션 전처리
         logger.debug("Preprocessing segmentation file...")
         processed_volume = preprocess_segmentation(self._volume)
         kidney_volume = preprocess_kidney_segmentation(processed_volume)
 
-        # 3. 메시 추출 (in-memory)
+        # 4. 메시 추출 (in-memory)
         logger.debug("Extracting Mesh from volume...")
         self._meshes = extract_meshes_from_volume(processed_volume, kidney_volume)
 
         # 디버그 저장 (step1 전)
         self._save_debug("before_step1")
 
-        # 4. 1단계 스무딩
+        # 5. 1단계 스무딩
         logger.debug("Step 1 in progress...")
         stage1_preset = self.settings.load_stage1_preset()
         self._meshes = smooth_mesh_collection(self._meshes, list(stage1_preset))
 
         self._save_debug("after_step1")
 
-        # 5. Poisson 재구성
+        # 6. Poisson 재구성
         logger.debug("Applying poisson reconstruction...")
         self._meshes = process_vessel_reconstruction(self._meshes)
 
-        # 6. 2단계 스무딩
+        # 7. 2단계 스무딩
         logger.debug("Step 2 in progress...")
         stage2_preset = self.settings.load_stage2_preset()
         self._meshes = smooth_mesh_collection(self._meshes, list(stage2_preset))
 
-        # 7. 결과 저장
+        # 8. 결과 저장
         output_path = self._save_result()
 
         elapsed = time.time() - start_time

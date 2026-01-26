@@ -77,3 +77,12 @@ class SimplificationFuncType:
     """Simplification 함수 타입 상수"""
     DECIMATE: str = "decimate"
     DECIMATE_PRO: str = "decimate_pro"
+
+
+@dataclass(frozen=True)
+class ResamplingParams:
+    """고해상도 이미지 리샘플링 파라미터"""
+    # X, Y 축 중 하나라도 이 값 이하면 리샘플링 수행
+    THRESHOLD: float = 0.25  # mm
+    # 리샘플링 목표 spacing (X, Y축에만 적용, Z축은 원본 유지)
+    TARGET_XY: float = 0.75  # mm

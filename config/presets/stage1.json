@@ -115,9 +115,9 @@
     "name": "Ureter",
     "smoothing_func": "taubin",
     "smoothing_kwargs": {
-      "n_iter": 20,
-      "pass_band": 0.1,
-      "feature_angle": 100.0,
+      "n_iter": 70,
+      "pass_band": 0.01,
+      "feature_angle": 150.0,
       "boundary_smoothing": true,
       "feature_smoothing": true,
       "non_manifold_smoothing": true

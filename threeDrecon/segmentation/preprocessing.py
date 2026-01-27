@@ -6,9 +6,10 @@ NIfTI 세그멘테이션 라벨을 전처리합니다.
 
 from pathlib import Path
 import numpy as np
+import scipy.ndimage
 from scipy.ndimage import binary_dilation, distance_transform_edt
 
-from ...config.constants import Label, MorphologyParams
+from ...config.constants import Label, MorphologyParams, VesselParams
 from ...config.logger import logger
 from ...domain.types import VolumeData
 from ...file_io.nifti import copy_metadata, save_nifti
@@ -45,6 +46,49 @@ def apply_fat_dilation(
     return fat_mask | kidney_boundary
 
 
+def filter_by_volume(
+    mask: np.ndarray,
+    min_volume_mm3: float,
+    spacing: tuple[float, float, float],
+) -> np.ndarray:
+    """
+    최소 부피 이하의 연결 요소 제거
+
+    Args:
+        mask: 바이너리 마스크 (3D)
+        min_volume_mm3: 최소 부피 임계값 (mm³)
+        spacing: 복셀 간격 (z, y, x) in mm
+
+    Returns:
+        필터링된 마스크
+    """
+    if not mask.any():
+        return mask
+
+    voxel_volume = float(np.prod(spacing))  # mm³ per voxel
+    structure = np.ones((3, 3, 3), dtype=bool)
+    labeled, n_components = scipy.ndimage.label(mask, structure=structure)
+
+    if n_components == 0:
+        return mask
+
+    result = np.zeros_like(mask, dtype=np.uint8)
+    removed_count = 0
+
+    for i in range(1, n_components + 1):
+        component = labeled == i
+        volume_mm3 = component.sum() * voxel_volume
+        if volume_mm3 >= min_volume_mm3:
+            result[component] = 1
+        else:
+            removed_count += 1
+
+    if removed_count > 0:
+        logger.debug(f"Volume filter: removed {removed_count} components < {min_volume_mm3:.1f}mm³")
+
+    return result
+
+
 def get_kidney_z_range(label_array: np.ndarray) -> tuple[int, int]:
     """
     신장이 존재하는 Z 범위 반환
@@ -60,15 +104,20 @@ def get_kidney_z_range(label_array: np.ndarray) -> tuple[int, int]:
     return int(indices[0]), int(indices[-1])
 
 
-def preprocess_segmentation(volume: VolumeData) -> VolumeData:
+def preprocess_segmentation(
+    volume: VolumeData,
+    min_renal_volume_mm3: float = VesselParams.RENAL_MIN_VOLUME_MM3,
+) -> VolumeData:
     """
     세그멘테이션 전처리 메인 함수
 
     1. 혈관 분기 자동 분할 (Renal_a, Renal_v 생성)
-    2. Fat dilation 적용
+    2. 분기에 부피 필터링 적용
+    3. Fat dilation 적용
 
     Args:
         volume: 입력 VolumeData
+        min_renal_volume_mm3: 신동맥/신정맥 최소 부피 임계값 (mm³)
 
     Returns:
         전처리된 VolumeData
@@ -80,6 +129,11 @@ def preprocess_segmentation(volume: VolumeData) -> VolumeData:
 
     # 혈관 분기 처리
     renal_a, renal_v = process_vessel_branches(label_array, z_start, z_end)
+
+    # 부피 필터링 적용 (작은 노이즈 제거)
+    if min_renal_volume_mm3 > 0:
+        renal_a = filter_by_volume(renal_a, min_renal_volume_mm3, volume.spacing)
+        renal_v = filter_by_volume(renal_v, min_renal_volume_mm3, volume.spacing)
 
     # 혈관 마스크 생성 (원본 + 분기)
     vessel_mask = (

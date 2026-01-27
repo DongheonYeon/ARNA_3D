@@ -49,7 +49,7 @@ if __name__ == "__main__":
 
     # process_all()
     
-    case_num = "case_S007"
-    input_path = fr"C:\Users\USER\Documents\Projects\ARNA-3D\data\{case_num}\mask\segment__combined.nii.gz"
-    output_path = fr"C:\Users\USER\Documents\Projects\ARNA-3D\data\{case_num}\3d\obj_A.glb"
+    case_num = "case_3a7b848d-62b9-43f1-91c5-c5ab75e0eda9"
+    input_path = fr"C:\Users\USER\Documents\Projects\ARNA_3D\data\{case_num}\mask\segment__combined.nii.gz"
+    output_path = fr"C:\Users\USER\Documents\Projects\ARNA_3D\data\{case_num}\3d\obj_A.glb"
     result = core_smooth(input_path, output_path)

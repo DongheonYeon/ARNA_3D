@@ -47,7 +47,6 @@ def get_largest_component(mask: np.ndarray, n: int = 1) -> np.ndarray:
 
     return result
 
-
 def get_max_inscribed_circle(mask_2d: np.ndarray) -> tuple[tuple[int, int] | None, float | None]:
     """
     2D 마스크에서 최대 내접원의 중심과 반경 계산

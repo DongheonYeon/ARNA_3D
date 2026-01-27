@@ -36,6 +36,9 @@ class VesselParams:
     # Z-score 분석 파라미터
     ZSCORE_WINDOW_SIZE: int = 5
 
+    # 신동맥/신정맥 부피 필터링 (mm³)
+    RENAL_MIN_VOLUME_MM3: float = 100.0
+
 
 @dataclass(frozen=True)
 class PoissonParams:

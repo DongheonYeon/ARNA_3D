@@ -18,6 +18,7 @@ def poisson_reconstruct(
     meshes: list[trimesh.Trimesh],
     depth: int = PoissonParams.DEPTH,
     sample_points: int = PoissonParams.SAMPLE_POINTS,
+    use_lcc: bool = True,
 ) -> trimesh.Trimesh:
     """
     여러 메시를 Poisson 재구성으로 병합
@@ -26,6 +27,7 @@ def poisson_reconstruct(
         meshes: 병합할 메시 리스트
         depth: Poisson 재구성 깊이
         sample_points: 포인트 샘플링 수
+        use_lcc: True면 가장 큰 연결 요소만 유지
 
     Returns:
         재구성된 메시
@@ -52,16 +54,20 @@ def poisson_reconstruct(
     # trimesh로 변환
     tri_mesh = open3d_to_trimesh(mesh_out)
 
-    # 가장 큰 연결 요소만 유지
-    components = tri_mesh.split(only_watertight=False)
-    if len(components) > 1:
-        logger.debug(f"       - Connected components: {len(components)} - using largest")
-        tri_mesh = max(components, key=lambda c: c.area)
+    # 가장 큰 연결 요소만 유지 (옵션)
+    if use_lcc:
+        components = tri_mesh.split(only_watertight=False)
+        if len(components) > 1:
+            logger.debug(f"       - Connected components: {len(components)} - using largest")
+            tri_mesh = max(components, key=lambda c: c.area)
 
     return tri_mesh
 
 
-def process_vessel_reconstruction(collection: MeshCollection) -> MeshCollection:
+def process_vessel_reconstruction(
+    collection: MeshCollection,
+    use_lcc: bool = False,
+) -> MeshCollection:
     """
     혈관 그룹을 Poisson 재구성으로 처리
 
@@ -70,6 +76,7 @@ def process_vessel_reconstruction(collection: MeshCollection) -> MeshCollection:
 
     Args:
         collection: 입력 MeshCollection
+        use_lcc: True면 재구성 후 가장 큰 연결 요소만 유지 (기본값: False)
 
     Returns:
         재구성된 MeshCollection
@@ -87,7 +94,7 @@ def process_vessel_reconstruction(collection: MeshCollection) -> MeshCollection:
     ]
     if artery_meshes:
         logger.debug("Processing Artery group")
-        reconstructed_artery = poisson_reconstruct(artery_meshes)
+        reconstructed_artery = poisson_reconstruct(artery_meshes, use_lcc=use_lcc)
         result.add("Artery", reconstructed_artery)
 
     # Vein 그룹 처리
@@ -97,7 +104,7 @@ def process_vessel_reconstruction(collection: MeshCollection) -> MeshCollection:
     ]
     if vein_meshes:
         logger.debug("Processing Vein group")
-        reconstructed_vein = poisson_reconstruct(vein_meshes)
+        reconstructed_vein = poisson_reconstruct(vein_meshes, use_lcc=use_lcc)
         result.add("Vein", reconstructed_vein)
 
     # 나머지 구조물은 그대로 추가

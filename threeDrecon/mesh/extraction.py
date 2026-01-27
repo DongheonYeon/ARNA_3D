@@ -194,6 +194,10 @@ def _add_tumor_meshes(
     # 크기순 정렬
     valid_parts = sorted(valid_parts, key=lambda m: len(m.faces), reverse=True)
 
-    for i, part in enumerate(valid_parts, start=1):
-        part_name = f"Tumor-{i}"
-        collection.add(part_name, part)
+    # 단일 tumor면 번호 없이, 여러 개면 번호 부여
+    if len(valid_parts) == 1:
+        collection.add("Tumor", valid_parts[0])
+    else:
+        for i, part in enumerate(valid_parts, start=1):
+            part_name = f"Tumor-{i}"
+            collection.add(part_name, part)

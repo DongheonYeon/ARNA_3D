@@ -1,6 +1,11 @@
 """
-백엔드 통합 시, 이 파일 전체를 아래 한 줄로 교체합니다:
+백엔드 통합 시, 이 파일 전체를 다음과 같이 교체합니다:
+
 from logger import logger
+
+# Explicitly export logger for use by other modules in make_glb
+__all__ = ['logger']
+
 """
 
 class SimpleLogger:

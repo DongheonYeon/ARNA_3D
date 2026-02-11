@@ -81,7 +81,7 @@ class Pipeline:
 
         # 6. Poisson 재구성
         logger.debug("Applying poisson reconstruction...")
-        self._meshes = process_vessel_reconstruction(self._meshes)
+        self._meshes = process_vessel_reconstruction(self._meshes, debug=self.settings.debug)
 
         # 7. 2단계 스무딩
         logger.debug("Step 2 in progress...")

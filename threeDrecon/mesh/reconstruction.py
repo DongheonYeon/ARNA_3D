@@ -14,12 +14,49 @@ from ...domain.types import MeshCollection
 from .conversion import trimesh_to_open3d, open3d_to_trimesh
 
 
+def _create_bbox_mesh(
+    bbox: o3d.geometry.AxisAlignedBoundingBox,
+    color: tuple[int, int, int, int] = (255, 255, 0, 128),
+) -> trimesh.Trimesh:
+    """
+    Open3D AxisAlignedBoundingBox를 solid box 메시로 변환
+
+    Args:
+        bbox: Open3D bounding box
+        color: RGBA 색상 (기본값: 반투명 노란색)
+
+    Returns:
+        solid box 메시
+    """
+    min_bound = np.array(bbox.min_bound)
+    max_bound = np.array(bbox.max_bound)
+
+    # 박스 크기 및 중심 계산
+    extents = max_bound - min_bound
+    center = (min_bound + max_bound) / 2
+
+    # solid box 생성
+    box_mesh = trimesh.creation.box(extents=extents)
+    box_mesh.apply_translation(center)
+
+    # GLB 호환 PBR material 적용
+    material = trimesh.visual.material.PBRMaterial(
+        baseColorFactor=[color[0] / 255, color[1] / 255, color[2] / 255, color[3] / 255],
+        metallicFactor=0.0,
+        roughnessFactor=0.5,
+    )
+    box_mesh.visual = trimesh.visual.TextureVisuals(material=material)
+
+    return box_mesh
+
+
 def poisson_reconstruct(
     meshes: list[trimesh.Trimesh],
     depth: int = PoissonParams.DEPTH,
     sample_points: int = PoissonParams.SAMPLE_POINTS,
     use_lcc: bool = True,
-) -> trimesh.Trimesh:
+    return_bbox: bool = False,
+) -> trimesh.Trimesh | tuple[trimesh.Trimesh, trimesh.Trimesh]:
     """
     여러 메시를 Poisson 재구성으로 병합
 
@@ -49,7 +86,28 @@ def poisson_reconstruct(
 
     # Poisson 재구성
     mesh_out, _ = o3d.geometry.TriangleMesh.create_from_point_cloud_poisson(pcd, depth=depth)
-    mesh_out = mesh_out.crop(pcd.get_axis_aligned_bounding_box())
+    bbox = pcd.get_axis_aligned_bounding_box()
+    '''
+            y(+)
+    [max]   ↑
+     x(+) ← +--------+
+           /        /|
+          /        / |
+         +-------+|  |
+         |        |  |
+         |        |  +
+         |        | /
+         |        |/
+         +--------+ → x(+)
+                ↙ ↓   [min]
+            z(+) y(+)
+    '''
+    min_padding = np.array([10.0, 0.0, 10.0])
+    max_padding = np.array([10.0, 0.0, 10.0])
+    padded_min = np.array(bbox.min_bound) - min_padding
+    padded_max = np.array(bbox.max_bound) + max_padding
+    crop_bbox = o3d.geometry.AxisAlignedBoundingBox(min_bound=padded_min, max_bound=padded_max)
+    mesh_out = mesh_out.crop(crop_bbox)
 
     # trimesh로 변환
     tri_mesh = open3d_to_trimesh(mesh_out)
@@ -61,12 +119,18 @@ def poisson_reconstruct(
             logger.debug(f"       - Connected components: {len(components)} - using largest")
             tri_mesh = max(components, key=lambda c: c.area)
 
+    if return_bbox:
+        # 실제 crop에 사용된 bbox (패딩 적용됨) 시각화
+        bbox_mesh = _create_bbox_mesh(crop_bbox)
+        return tri_mesh, bbox_mesh
+
     return tri_mesh
 
 
 def process_vessel_reconstruction(
     collection: MeshCollection,
     use_lcc: bool = False,
+    debug: bool = False,
 ) -> MeshCollection:
     """
     혈관 그룹을 Poisson 재구성으로 처리
@@ -77,6 +141,7 @@ def process_vessel_reconstruction(
     Args:
         collection: 입력 MeshCollection
         use_lcc: True면 재구성 후 가장 큰 연결 요소만 유지 (기본값: False)
+        debug: True면 crop에 사용된 bounding box 메시도 추가
 
     Returns:
         재구성된 MeshCollection
@@ -94,8 +159,15 @@ def process_vessel_reconstruction(
     ]
     if artery_meshes:
         logger.debug("Processing Artery group")
-        reconstructed_artery = poisson_reconstruct(artery_meshes, use_lcc=use_lcc)
-        result.add("Artery", reconstructed_artery)
+        if debug:
+            reconstructed_artery, artery_bbox = poisson_reconstruct(
+                artery_meshes, use_lcc=use_lcc, return_bbox=True
+            )
+            result.add("Artery", reconstructed_artery)
+            result.add("Artery_bbox", artery_bbox)
+        else:
+            reconstructed_artery = poisson_reconstruct(artery_meshes, use_lcc=use_lcc)
+            result.add("Artery", reconstructed_artery)
 
     # Vein 그룹 처리
     vein_meshes = [
@@ -104,8 +176,15 @@ def process_vessel_reconstruction(
     ]
     if vein_meshes:
         logger.debug("Processing Vein group")
-        reconstructed_vein = poisson_reconstruct(vein_meshes, use_lcc=use_lcc)
-        result.add("Vein", reconstructed_vein)
+        if debug:
+            reconstructed_vein, vein_bbox = poisson_reconstruct(
+                vein_meshes, use_lcc=use_lcc, return_bbox=True
+            )
+            result.add("Vein", reconstructed_vein)
+            result.add("Vein_bbox", vein_bbox)
+        else:
+            reconstructed_vein = poisson_reconstruct(vein_meshes, use_lcc=use_lcc)
+            result.add("Vein", reconstructed_vein)
 
     # 나머지 구조물은 그대로 추가
     excluded = set(artery_group + vein_group)

@@ -144,6 +144,7 @@ def smooth_mesh_collection(
         처리된 새 MeshCollection
     """
     result = MeshCollection()
+    processed_names = set()
 
     for config in configs:
         # 설정 이름과 일치하거나 접두사로 시작하는 메시 찾기
@@ -167,5 +168,11 @@ def smooth_mesh_collection(
 
             processed = process_single_mesh(mesh, mesh_config)
             result.add(mesh_name, processed)
+            processed_names.add(mesh_name)
+
+    # preset에 없는 메시는 그대로 유지 (bbox 등 디버그용 메시)
+    for mesh_name, mesh in collection.items():
+        if mesh_name not in processed_names:
+            result.add(mesh_name, mesh)
 
     return result

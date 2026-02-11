@@ -48,6 +48,7 @@ def process_all():
 if __name__ == "__main__":
 
     # process_all()
+    
     '''
     S022: 3d702647-5d73-4c93-85c4-566e5c587276 (큰 Tumor 2개, 리메싱 시간 측정용)
     S028: 048561bc-ae15-4458-9fc3-bf32c1a5f18d (안보이는 Tumor 하나 (신장외부), Artery 이상함)
@@ -55,9 +56,9 @@ if __name__ == "__main__":
     
     S006: 4a69f761-e9c5-46ab-8ff0-13bf2f418027 (너무 많은 Tumor)
     S002: aa507f5a-4b19-40d2-b706-1d424338ee77 (Vein 끊김)
-    
+    S001: d4178823-f496-4c53-9d3e-0aa403560adc
     '''
-    case_num = "4a69f761-e9c5-46ab-8ff0-13bf2f418027"
+    case_num = "3d702647-5d73-4c93-85c4-566e5c587276"
     input_path = fr"C:\Users\USER\Documents\Projects\ARNA_3D\data\case_{case_num}\mask\segment__combined.nii.gz"
     output_path = fr"C:\Users\USER\Documents\Projects\ARNA_3D\data\case_{case_num}\3d\obj_A.glb"
     result = core_smooth(input_path, output_path)

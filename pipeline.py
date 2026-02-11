@@ -11,6 +11,10 @@ from .threeDrecon.segmentation.preprocessing import (
     preprocess_segmentation,
     preprocess_kidney_segmentation,
 )
+from .threeDrecon.segmentation.tumor_analysis import (
+    analyze_tumor_locations,
+    TumorLocationInfo,
+)
 from .threeDrecon.mesh.extraction import extract_meshes_from_volume
 from .threeDrecon.mesh.smoothing import smooth_mesh_collection
 from .threeDrecon.mesh.reconstruction import process_vessel_reconstruction
@@ -28,6 +32,7 @@ class Pipeline:
     # 내부 상태
     _volume: VolumeData | None = field(default=None, init=False)
     _meshes: MeshCollection | None = field(default=None, init=False)
+    _tumor_infos: list[TumorLocationInfo] = field(default_factory=list, init=False)
 
     def run(self) -> str | None:
         """
@@ -59,6 +64,10 @@ class Pipeline:
         # 4. 메시 추출 (in-memory)
         logger.debug("Extracting Mesh from volume...")
         self._meshes = extract_meshes_from_volume(processed_volume, kidney_volume)
+
+        # 4.5 종양 위치 분석 (저장 직전에 메타데이터 적용)
+        logger.debug("Analyzing tumor locations...")
+        self._tumor_infos = analyze_tumor_locations(self._volume)
 
         # 디버그 저장 (step1 전)
         self._save_debug("before_step1")
@@ -106,6 +115,13 @@ class Pipeline:
         """최종 결과 저장"""
         output_path = self.settings.output_path
         output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # 종양 위치 메타데이터 적용 (스무딩 후 메시에 직접 적용)
+        for info in self._tumor_infos:
+            mesh_name = "Tumor" if len(self._tumor_infos) == 1 else f"Tumor-{info.tumor_id}"
+            mesh = self._meshes.get(mesh_name)
+            if mesh:
+                mesh.metadata["extras"] = {"isInside": info.is_inside}
 
         scene = self._meshes.to_scene()
         save_scene(scene, output_path)

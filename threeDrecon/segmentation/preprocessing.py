@@ -9,7 +9,7 @@ import numpy as np
 import scipy.ndimage
 from scipy.ndimage import binary_dilation, distance_transform_edt
 
-from ...config.constants import Label, MorphologyParams, VesselParams
+from ...config.constants import Label, MorphologyParams, VesselParams, TumorParams
 from ...config.logger import logger
 from ...domain.types import VolumeData
 from ...file_io.nifti import copy_metadata, save_nifti
@@ -89,6 +89,74 @@ def filter_by_volume(
     return result
 
 
+def filter_tumor(
+    label_array: np.ndarray,
+    spacing: tuple[float, float, float],
+    min_volume_mm3: float = TumorParams.MIN_VOLUME_MM3,
+) -> np.ndarray:
+    """
+    종양 필터링: 신장과 접촉하지 않거나 너무 작은 종양 제거
+
+    Args:
+        label_array: 세그멘테이션 라벨 배열
+        spacing: 복셀 간격 (X, Y, Z) in mm
+        min_volume_mm3: 최소 부피 임계값 (mm³)
+
+    Returns:
+        필터링된 라벨 배열
+    """
+    tumor_mask = label_array == Label.TUMOR
+    kidney_mask = label_array == Label.KIDNEY
+
+    if not tumor_mask.any():
+        return label_array
+
+    if not kidney_mask.any():
+        # 신장이 없으면 모든 종양 제거
+        logger.debug("Tumor filter: no kidney found, removing all tumors")
+        result = label_array.copy()
+        result[tumor_mask] = 0
+        return result
+
+    # 신장 마스크를 1 voxel dilation (접촉 판정용)
+    structure = np.ones((3, 3, 3), dtype=bool)
+    kidney_dilated = binary_dilation(kidney_mask, structure=structure, iterations=1)
+
+    # 개별 종양 컴포넌트 분리
+    labeled, n_tumors = scipy.ndimage.label(tumor_mask, structure=structure)
+
+    if n_tumors == 0:
+        return label_array
+
+    voxel_volume = float(np.prod(spacing))  # mm³ per voxel
+    result = label_array.copy()
+
+    removed_no_contact = 0
+    removed_volume = 0
+
+    for i in range(1, n_tumors + 1):
+        component = labeled == i
+
+        # 1. 신장과 접촉 여부 체크 (dilated 신장과 교집합)
+        if not np.any(component & kidney_dilated):
+            result[component] = 0
+            removed_no_contact += 1
+            continue
+
+        # 2. 부피 체크 (min_volume_mm3 > 0 일 때만)
+        if min_volume_mm3 > 0:
+            volume_mm3 = component.sum() * voxel_volume
+            if volume_mm3 < min_volume_mm3:
+                result[component] = 0
+                removed_volume += 1
+                continue
+
+    if removed_no_contact > 0 or removed_volume > 0:
+        logger.debug(f"Tumor filter: removed {removed_no_contact} (no kidney contact) + {removed_volume} (< {min_volume_mm3:.1f}mm³)")
+
+    return result
+
+
 def get_kidney_z_range(label_array: np.ndarray) -> tuple[int, int]:
     """
     신장이 존재하는 Z 범위 반환
@@ -111,9 +179,10 @@ def preprocess_segmentation(
     """
     세그멘테이션 전처리 메인 함수
 
-    1. 혈관 분기 자동 분할 (Renal_a, Renal_v 생성)
-    2. 분기에 부피 필터링 적용
-    3. Fat dilation 적용
+    1. 종양 필터링 (신장 bbox 외부, 너무 작은 종양 제거)
+    2. 혈관 분기 자동 분할 (Renal_a, Renal_v 생성)
+    3. 분기에 부피 필터링 적용
+    4. Fat dilation 적용
 
     Args:
         volume: 입력 VolumeData
@@ -122,7 +191,8 @@ def preprocess_segmentation(
     Returns:
         전처리된 VolumeData
     """
-    label_array = volume.array
+    # 종양 필터링 (신장 bbox 외부 + 작은 부피 제거)
+    label_array = filter_tumor(volume.array, volume.spacing)
 
     # 신장 Z 범위 계산
     z_start, z_end = get_kidney_z_range(label_array)

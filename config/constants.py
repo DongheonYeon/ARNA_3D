@@ -63,6 +63,13 @@ class MorphologyParams:
 
 
 @dataclass(frozen=True)
+class TumorParams:
+    """종양 필터링 파라미터"""
+    # 최소 부피 (mm³) - 이보다 작은 종양은 제거
+    MIN_VOLUME_MM3: float = 0
+
+
+@dataclass(frozen=True)
 class SmoothingFuncType:
     """Smoothing 함수 타입 상수"""
     LAPLACIAN: str = "laplacian"

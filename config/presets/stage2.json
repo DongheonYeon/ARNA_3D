@@ -9,6 +9,15 @@
     "simplification_kwargs": null
   },
   {
+    "name": "Cyst",
+    "smoothing_func": null,
+    "smoothing_kwargs": null,
+    "dilation_func": null,
+    "dilation_kwargs": null,
+    "simplification_func": null,
+    "simplification_kwargs": null
+  },
+  {
     "name": "Kidney",
     "smoothing_func": null,
     "smoothing_kwargs": null,

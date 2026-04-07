@@ -73,6 +73,8 @@ class PipelineSettings:
 
     # 디버그 설정
     debug: bool = False
+    # 혈관 분기(split) 설정
+    enable_vessel_branch_split: bool = True
 
     # 프리셋 경로 (기본값은 패키지 내 presets 폴더)
     stage1_preset_path: Path | None = None

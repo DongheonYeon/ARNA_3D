@@ -65,9 +65,10 @@ def poisson_reconstruct(
         depth: Poisson 재구성 깊이
         sample_points: 포인트 샘플링 수
         use_lcc: True면 가장 큰 연결 요소만 유지
+        return_bbox: True면 crop bbox 메시도 함께 반환
 
     Returns:
-        재구성된 메시
+        재구성된 메시 또는 (재구성 메시, bbox 메시)
     """
     if not meshes:
         raise ValueError("[ERROR] Input mesh list is empty")

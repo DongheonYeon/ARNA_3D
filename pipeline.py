@@ -58,7 +58,10 @@ class Pipeline:
 
         # 3. 세그멘테이션 전처리
         logger.debug("Preprocessing segmentation file...")
-        processed_volume = preprocess_segmentation(self._volume)
+        processed_volume = preprocess_segmentation(
+            self._volume,
+            enable_vessel_branch_split=self.settings.enable_vessel_branch_split,
+        )
         kidney_volume = preprocess_kidney_segmentation(processed_volume)
 
         # 4. 메시 추출 (in-memory)
@@ -133,6 +136,7 @@ def run_pipeline(
     input_path: Path | str,
     output_path: Path | str,
     debug: bool = False,
+    enable_vessel_branch_split: bool = True,
 ) -> str | None:
     """
     파이프라인 실행 함수
@@ -141,6 +145,7 @@ def run_pipeline(
         input_path: 입력 NIfTI 파일 경로
         output_path: 출력 GLB 파일 경로
         debug: 디버그 모드
+        enable_vessel_branch_split: 혈관 분기(split) 적용 여부
 
     Returns:
         저장된 GLB 파일 경로 (실패 시 None)
@@ -149,6 +154,7 @@ def run_pipeline(
         input_path=Path(input_path),
         output_path=Path(output_path),
         debug=debug,
+        enable_vessel_branch_split=enable_vessel_branch_split,
     )
 
     pipeline = Pipeline(settings=settings)

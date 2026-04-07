@@ -10,8 +10,9 @@ class Label(IntEnum):
     VEIN = 4
     URETER = 5
     FAT = 6
-    RENAL_A = 7  # 동맥 분기
-    RENAL_V = 8  # 정맥 분기
+    CYST = 7
+    RENAL_A = 8  # 동맥 분기
+    RENAL_V = 9  # 정맥 분기
 
     @classmethod
     def to_name_map(cls) -> dict[int, str]:

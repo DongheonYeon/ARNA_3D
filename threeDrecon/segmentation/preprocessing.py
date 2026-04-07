@@ -175,6 +175,7 @@ def get_kidney_z_range(label_array: np.ndarray) -> tuple[int, int]:
 def preprocess_segmentation(
     volume: VolumeData,
     min_renal_volume_mm3: float = VesselParams.RENAL_MIN_VOLUME_MM3,
+    enable_vessel_branch_split: bool = True,
 ) -> VolumeData:
     """
     세그멘테이션 전처리 메인 함수
@@ -187,6 +188,7 @@ def preprocess_segmentation(
     Args:
         volume: 입력 VolumeData
         min_renal_volume_mm3: 신동맥/신정맥 최소 부피 임계값 (mm³)
+        enable_vessel_branch_split: True면 혈관 분기(split) 수행
 
     Returns:
         전처리된 VolumeData
@@ -194,16 +196,22 @@ def preprocess_segmentation(
     # 종양 필터링 (신장 bbox 외부 + 작은 부피 제거)
     label_array = filter_tumor(volume.array, volume.spacing)
 
-    # 신장 Z 범위 계산
-    z_start, z_end = get_kidney_z_range(label_array)
+    renal_a = np.zeros_like(label_array, dtype=np.uint8)
+    renal_v = np.zeros_like(label_array, dtype=np.uint8)
 
-    # 혈관 분기 처리
-    renal_a, renal_v = process_vessel_branches(label_array, z_start, z_end)
+    if enable_vessel_branch_split:
+        # 신장 Z 범위 계산
+        z_start, z_end = get_kidney_z_range(label_array)
 
-    # 부피 필터링 적용 (작은 노이즈 제거)
-    if min_renal_volume_mm3 > 0:
-        renal_a = filter_by_volume(renal_a, min_renal_volume_mm3, volume.spacing)
-        renal_v = filter_by_volume(renal_v, min_renal_volume_mm3, volume.spacing)
+        # 혈관 분기 처리
+        renal_a, renal_v = process_vessel_branches(label_array, z_start, z_end)
+
+        # 부피 필터링 적용 (작은 노이즈 제거)
+        if min_renal_volume_mm3 > 0:
+            renal_a = filter_by_volume(renal_a, min_renal_volume_mm3, volume.spacing)
+            renal_v = filter_by_volume(renal_v, min_renal_volume_mm3, volume.spacing)
+    else:
+        logger.info("Vessel branch split disabled: skip Renal_a/Renal_v generation.")
 
     # 혈관 마스크 생성 (원본 + 분기)
     vessel_mask = (
@@ -228,8 +236,9 @@ def preprocess_segmentation(
     out_arr[ureter_mask] = label_array[ureter_mask]  # 원본 요관 라벨 복원
 
     # 분기 라벨 추가
-    out_arr[renal_a.astype(bool)] = Label.RENAL_A
-    out_arr[renal_v.astype(bool)] = Label.RENAL_V
+    if enable_vessel_branch_split:
+        out_arr[renal_a.astype(bool)] = Label.RENAL_A
+        out_arr[renal_v.astype(bool)] = Label.RENAL_V
 
     return copy_metadata(volume, out_arr)
 
